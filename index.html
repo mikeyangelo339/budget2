@@ -86,17 +86,17 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 .setup-divider{width:100%;max-width:400px;border:none;border-top:1px solid var(--border);margin:20px 0}
 
 /* DONUT CHART */
-.donut-wrap{display:flex;align-items:center;gap:20px;padding:4px 0}
+.donut-wrap{display:flex;flex-direction:column;align-items:center;gap:16px;padding:4px 0}
 .donut-svg{flex-shrink:0;cursor:pointer}
 .donut-center{font-size:11px;text-anchor:middle;dominant-baseline:middle}
 .donut-total{font-size:13px;font-weight:700;fill:var(--text)}
 .donut-label{font-size:9px;fill:var(--text2)}
-.donut-legend{flex:1;display:flex;flex-direction:column;gap:6px}
-.donut-legend-item{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2);cursor:pointer;border-radius:6px;padding:3px 6px;transition:background .15s}
+.donut-legend{width:100%;display:grid;grid-template-columns:1fr 1fr;gap:6px 12px}
+.donut-legend-item{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer;border-radius:6px;padding:4px 6px;transition:background .15s;min-width:0}
 .donut-legend-item:hover{background:var(--surface2)}
-.donut-legend-item.active{color:var(--text)}
-.legend-swatch{width:10px;height:10px;border-radius:3px;flex-shrink:0}
-.legend-val{margin-left:auto;font-weight:600;color:var(--text);font-size:12px}
+.donut-legend-item.active{color:var(--text);background:var(--surface2)}
+.legend-swatch{width:9px;height:9px;border-radius:2px;flex-shrink:0}
+.legend-val{margin-left:auto;font-weight:600;color:var(--text);font-size:11px;flex-shrink:0}
 
 /* PAY SCHEDULE */
 .pay-banner{background:var(--purple-bg);border:1px solid #2d1f5e;border-radius:var(--radius-sm);padding:12px 14px;margin:0 16px 12px;display:flex;align-items:center;gap:10px}
@@ -187,7 +187,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l2.5 2.5"/></svg>Spending
   </button>
   <button onclick="showPage('fuel')" id="nav-fuel">
-    <svg viewBox="0 0 24 24"><path d="M3 22V8l9-6 9 6v14"/><path d="M9 22v-6h6v6"/><path d="M18 8h2a1 1 0 011 1v5a1 1 0 01-1 1h-2"/></svg>Fuel
+    <span style="font-size:20px;line-height:1">⛽</span>Fuel
   </button>
   <button onclick="showPage('history')" id="nav-history">
     <svg viewBox="0 0 24 24"><path d="M3 3v6h6"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 3"/></svg>History
@@ -388,7 +388,7 @@ const CATS = [
 
 const BILLS = [
   {id:'old-car',   name:'Old car loan',      amount:335.76, day:null, note:'Monthly — confirm due date',            freq:'monthly', rachel:false},
-  {id:'insurance', name:'Car insurance',     amount:232.05, day:null, note:'Monthly — confirm due date',            freq:'monthly', rachel:false},
+  {id:'insurance', name:'Car insurance',     amount:232.05, day:17,   note:'17th each month',                       freq:'monthly', rachel:false},
   {id:'medify',    name:'Medify',            amount:58.89,  day:20,   note:'20th — cancel after September',         freq:'monthly', rachel:false},
   {id:'phone',     name:'Phone (Tangerine)', amount:15.15,  day:19,   note:'19th each month',                       freq:'monthly', rachel:false},
   {id:'fitness',   name:'Fitness Passport',  amount:82,     day:26,   note:'26th — collect $40 from Rachel first',  freq:'monthly', rachel:true},
