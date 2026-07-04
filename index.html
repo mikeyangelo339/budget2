@@ -387,7 +387,7 @@ const CATS = [
 ];
 
 const BILLS = [
-  {id:'old-car',   name:'Old car loan',      amount:335.76, day:null, note:'Monthly — confirm due date',            freq:'monthly', rachel:false},
+  {id:'old-car',   name:'Old car loan',      amount:335.76, day:30,   note:'30th each month',                       freq:'monthly', rachel:false},
   {id:'insurance', name:'Car insurance',     amount:232.05, day:17,   note:'17th each month',                       freq:'monthly', rachel:false},
   {id:'medify',    name:'Medify',            amount:58.89,  day:20,   note:'20th — cancel after September',         freq:'monthly', rachel:false},
   {id:'phone',     name:'Phone (Tangerine)', amount:15.15,  day:19,   note:'19th each month',                       freq:'monthly', rachel:false},
@@ -571,68 +571,115 @@ function drawDonut(svgId,legendId,centerValId,centerLblId,segments,centerLabel){
   const legend=document.getElementById(legendId);
   if(legend)legend.innerHTML='';
   const total=segments.reduce((s,seg)=>s+seg.value,0);
-  if(total===0){
-    const cv=document.getElementById(centerValId);const cl=document.getElementById(centerLblId);
-    if(cv)cv.textContent='$0';if(cl)cl.textContent=centerLabel;
-    return;
-  }
+  const cv=document.getElementById(centerValId);
+  const cl=document.getElementById(centerLblId);
+  if(total===0){if(cv)cv.textContent='$0';if(cl)cl.textContent=centerLabel;return;}
+
   const cx=80,cy=80,r=65,strokeW=20;
   const circ=2*Math.PI*r;
-  let startAngle=-Math.PI/2;
+  const GAP=2; // gap between segments in px
   let activeIdx=-1;
+  const circles=[];
 
-  function updateCenter(idx){
-    const cv=document.getElementById(centerValId);const cl=document.getElementById(centerLblId);
-    if(idx===-1){if(cv)cv.textContent=fmt(total);if(cl)cl.textContent=centerLabel}
-    else{if(cv)cv.textContent=fmt(segments[idx].value);if(cl)cl.textContent=segments[idx].label}
+  // Animate center value counting up
+  function animateValue(el,from,to,dur){
+    const start=performance.now();
+    function step(now){
+      const p=Math.min((now-start)/dur,1);
+      const ease=1-Math.pow(1-p,3);
+      el.textContent='$'+(from+(to-from)*ease).toFixed(0);
+      if(p<1)requestAnimationFrame(step);
+      else el.textContent=fmt(to);
+    }
+    requestAnimationFrame(step);
   }
+
+  function updateCenter(idx,animate){
+    if(idx===-1){
+      if(animate)animateValue(cv,0,total,600);
+      else if(cv)cv.textContent=fmt(total);
+      if(cl)cl.textContent=centerLabel;
+    } else {
+      if(cv)cv.textContent=fmt(segments[idx].value);
+      if(cl)cl.textContent=segments[idx].label;
+    }
+  }
+
+  // Build segments with gaps
+  let startAngle=-Math.PI/2;
+  const gapAngle=GAP/r;
 
   segments.forEach((seg,i)=>{
     const pct=seg.value/total;
-    const angle=pct*2*Math.PI;
-    const dashLen=pct*circ;
-    const dashOffset=circ/4; // start from top
-    // Use stroke-dasharray trick
+    const angle=Math.max(0,pct*2*Math.PI-gapAngle);
+    const dashLen=angle/( 2*Math.PI)*circ;
+
     const circle=document.createElementNS('http://www.w3.org/2000/svg','circle');
     circle.setAttribute('cx',cx);circle.setAttribute('cy',cy);circle.setAttribute('r',r);
-    circle.setAttribute('fill','none');circle.setAttribute('stroke',seg.color);
+    circle.setAttribute('fill','none');
+    circle.setAttribute('stroke',seg.color);
     circle.setAttribute('stroke-width',strokeW);
-    // Calculate rotation for this segment
-    const rotDeg=(startAngle+Math.PI/2)*180/Math.PI;
+    circle.setAttribute('stroke-linecap','round');
     circle.setAttribute('stroke-dasharray',`${dashLen} ${circ-dashLen}`);
     circle.setAttribute('stroke-dashoffset',circ/4);
-    circle.setAttribute('transform',`rotate(${rotDeg},${cx},${cy})`);
+    circle.setAttribute('transform',`rotate(${(startAngle+Math.PI/2)*180/Math.PI},${cx},${cy})`);
     circle.style.cursor='pointer';
-    circle.style.transition='stroke-width .2s,opacity .2s';
-    circle.addEventListener('mouseenter',()=>{
-      circle.setAttribute('stroke-width',strokeW+4);
-      updateCenter(i);
-      document.querySelectorAll(`#${legendId} .donut-legend-item`).forEach((el,j)=>el.classList.toggle('active',j===i));
-    });
-    circle.addEventListener('mouseleave',()=>{
-      circle.setAttribute('stroke-width',strokeW);
-      updateCenter(-1);
-      document.querySelectorAll(`#${legendId} .donut-legend-item`).forEach(el=>el.classList.remove('active'));
-    });
-    // Touch support
+    circle.style.transformOrigin=`${cx}px ${cy}px`;
+
+    // Draw-in animation using dashoffset
+    const fullDash=dashLen;
+    circle.setAttribute('stroke-dasharray',`0 ${circ}`);
+    circle.setAttribute('stroke-dashoffset',`${circ/4}`);
+    const delay=i*80;
+    setTimeout(()=>{
+      circle.style.transition=`stroke-dasharray 0.5s cubic-bezier(0.34,1.1,0.64,1) ${0}ms, stroke-width 0.2s ease, filter 0.2s ease`;
+      circle.setAttribute('stroke-dasharray',`${fullDash} ${circ-fullDash}`);
+    },delay);
+
+    // Hover/touch
+    const activate=(on)=>{
+      if(on){
+        circle.setAttribute('stroke-width',strokeW+5);
+        circle.style.filter=`drop-shadow(0 0 6px ${seg.color}88)`;
+        updateCenter(i);
+        document.querySelectorAll(`#${legendId} .donut-legend-item`).forEach((el,j)=>{
+          el.classList.toggle('active',j===i);
+          el.style.opacity=j===i?'1':'0.45';
+        });
+      } else {
+        circle.setAttribute('stroke-width',strokeW);
+        circle.style.filter='none';
+        updateCenter(-1);
+        document.querySelectorAll(`#${legendId} .donut-legend-item`).forEach(el=>{
+          el.classList.remove('active');el.style.opacity='1';
+        });
+      }
+    };
+    circle.addEventListener('mouseenter',()=>activate(true));
+    circle.addEventListener('mouseleave',()=>activate(false));
     circle.addEventListener('click',()=>{
-      if(activeIdx===i){activeIdx=-1;circle.setAttribute('stroke-width',strokeW);updateCenter(-1)}
-      else{activeIdx=i;circle.setAttribute('stroke-width',strokeW+4);updateCenter(i)}
+      activeIdx=activeIdx===i?-1:i;
+      activate(activeIdx===i);
     });
+
     segsGroup.appendChild(circle);
-    startAngle+=angle;
+    circles.push(circle);
+    startAngle+=angle+gapAngle;
 
     // Legend
     if(legend){
       const item=document.createElement('div');
       item.className='donut-legend-item';
-      item.innerHTML=`<div class="legend-swatch" style="background:${seg.color}"></div><span>${seg.label}</span><span class="legend-val">${fmt(seg.value)}</span>`;
-      item.addEventListener('mouseenter',()=>{circle.dispatchEvent(new Event('mouseenter'))});
-      item.addEventListener('mouseleave',()=>{circle.dispatchEvent(new Event('mouseleave'))});
+      item.style.transition='opacity .2s';
+      item.innerHTML=`<div class="legend-swatch" style="background:${seg.color};box-shadow:0 0 6px ${seg.color}66"></div><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${seg.label}</span><span class="legend-val">${fmt(seg.value)}</span>`;
+      item.addEventListener('mouseenter',()=>activate(true));
+      item.addEventListener('mouseleave',()=>activate(false));
       legend.appendChild(item);
     }
   });
-  updateCenter(-1);
+
+  // Animate center value in
+  setTimeout(()=>updateCenter(-1,true), segments.length*80+100);
 }
 
 // ─── OVERVIEW ────────────────────────────────────────────────────────────────
