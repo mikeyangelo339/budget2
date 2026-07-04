@@ -86,17 +86,17 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 .setup-divider{width:100%;max-width:400px;border:none;border-top:1px solid var(--border);margin:20px 0}
 
 /* DONUT CHART */
-.donut-wrap{display:flex;flex-direction:column;align-items:center;gap:16px;padding:4px 0}
-.donut-svg{flex-shrink:0;cursor:pointer}
-.donut-center{font-size:11px;text-anchor:middle;dominant-baseline:middle}
-.donut-total{font-size:13px;font-weight:700;fill:var(--text)}
-.donut-label{font-size:9px;fill:var(--text2)}
-.donut-legend{width:100%;display:grid;grid-template-columns:1fr 1fr;gap:6px 12px}
-.donut-legend-item{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer;border-radius:6px;padding:4px 6px;transition:background .15s;min-width:0}
+.donut-wrap{display:flex;flex-direction:column;align-items:center;gap:20px;padding:8px 0}
+.donut-svg{flex-shrink:0;cursor:pointer;overflow:visible}
+.donut-center{text-anchor:middle;dominant-baseline:middle}
+.donut-total{font-size:16px;font-weight:700;fill:var(--text)}
+.donut-label{font-size:11px;fill:var(--text2)}
+.donut-legend{width:100%;display:grid;grid-template-columns:1fr 1fr;gap:8px 16px}
+.donut-legend-item{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2);cursor:pointer;border-radius:6px;padding:5px 8px;transition:background .15s;min-width:0}
 .donut-legend-item:hover{background:var(--surface2)}
 .donut-legend-item.active{color:var(--text);background:var(--surface2)}
-.legend-swatch{width:9px;height:9px;border-radius:2px;flex-shrink:0}
-.legend-val{margin-left:auto;font-weight:600;color:var(--text);font-size:11px;flex-shrink:0}
+.legend-swatch{width:10px;height:10px;border-radius:3px;flex-shrink:0}
+.legend-val{margin-left:auto;font-weight:600;color:var(--text);font-size:12px;flex-shrink:0}
 
 /* PAY SCHEDULE */
 .pay-banner{background:var(--purple-bg);border:1px solid #2d1f5e;border-radius:var(--radius-sm);padding:12px 14px;margin:0 16px 12px;display:flex;align-items:center;gap:10px}
@@ -187,7 +187,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l2.5 2.5"/></svg>Spending
   </button>
   <button onclick="showPage('fuel')" id="nav-fuel">
-    <span style="font-size:20px;line-height:1">⛽</span>Fuel
+    <svg viewBox="0 0 24 24"><path d="M3 22V8l7-5 7 5v14H3z"/><path d="M9 22v-6h4v6"/><path d="M17 8h1a2 2 0 012 2v4a2 2 0 01-2 2h-1"/><path d="M17 12h2"/></svg>Fuel
   </button>
   <button onclick="showPage('history')" id="nav-history">
     <svg viewBox="0 0 24 24"><path d="M3 3v6h6"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 3"/></svg>History
@@ -228,11 +228,11 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   <div class="card" id="overview-donut-card" style="display:none">
     <div class="card-title">Where your money goes</div>
     <div class="donut-wrap">
-      <svg class="donut-svg" width="120" height="120" viewBox="0 0 120 120" id="overview-donut-svg">
-        <circle cx="60" cy="60" r="50" fill="none" stroke="var(--surface2)" stroke-width="18"/>
+      <svg class="donut-svg" width="160" height="160" viewBox="0 0 160 160" id="overview-donut-svg">
+        <circle cx="80" cy="80" r="65" fill="none" stroke="var(--surface2)" stroke-width="20"/>
         <g id="overview-donut-segs"></g>
-        <text x="60" y="56" class="donut-total" id="overview-donut-center-val">$0</text>
-        <text x="60" y="70" class="donut-label" id="overview-donut-center-lbl">income</text>
+        <text x="80" y="74" class="donut-total" id="overview-donut-center-val">$0</text>
+        <text x="80" y="92" class="donut-label" id="overview-donut-center-lbl">income</text>
       </svg>
       <div class="donut-legend" id="overview-donut-legend"></div>
     </div>
@@ -282,11 +282,11 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   <div class="card">
     <div class="card-title">Bills breakdown</div>
     <div class="donut-wrap">
-      <svg class="donut-svg" width="120" height="120" viewBox="0 0 120 120" id="bills-donut-svg">
-        <circle cx="60" cy="60" r="50" fill="none" stroke="var(--surface2)" stroke-width="18"/>
+      <svg class="donut-svg" width="160" height="160" viewBox="0 0 160 160" id="bills-donut-svg">
+        <circle cx="80" cy="80" r="65" fill="none" stroke="var(--surface2)" stroke-width="20"/>
         <g id="bills-donut-segs"></g>
-        <text x="60" y="56" class="donut-total" id="bills-donut-center-val">$0</text>
-        <text x="60" y="70" class="donut-label" id="bills-donut-center-lbl">total</text>
+        <text x="80" y="74" class="donut-total" id="bills-donut-center-val">$0</text>
+        <text x="80" y="92" class="donut-label" id="bills-donut-center-lbl">total</text>
       </svg>
       <div class="donut-legend" id="bills-donut-legend"></div>
     </div>
@@ -310,11 +310,11 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   <div class="card" id="spending-donut-card">
     <div class="card-title">Spending by category</div>
     <div class="donut-wrap">
-      <svg class="donut-svg" width="120" height="120" viewBox="0 0 120 120" id="spending-donut-svg">
-        <circle cx="60" cy="60" r="50" fill="none" stroke="var(--surface2)" stroke-width="18"/>
+      <svg class="donut-svg" width="160" height="160" viewBox="0 0 160 160" id="spending-donut-svg">
+        <circle cx="80" cy="80" r="65" fill="none" stroke="var(--surface2)" stroke-width="20"/>
         <g id="spending-donut-segs"></g>
-        <text x="60" y="56" class="donut-total" id="spending-donut-center-val">$0</text>
-        <text x="60" y="70" class="donut-label" id="spending-donut-center-lbl">this week</text>
+        <text x="80" y="74" class="donut-total" id="spending-donut-center-val">$0</text>
+        <text x="80" y="92" class="donut-label" id="spending-donut-center-lbl">this week</text>
       </svg>
       <div class="donut-legend" id="spending-donut-legend"></div>
     </div>
@@ -576,7 +576,7 @@ function drawDonut(svgId,legendId,centerValId,centerLblId,segments,centerLabel){
     if(cv)cv.textContent='$0';if(cl)cl.textContent=centerLabel;
     return;
   }
-  const cx=60,cy=60,r=50,strokeW=18;
+  const cx=80,cy=80,r=65,strokeW=20;
   const circ=2*Math.PI*r;
   let startAngle=-Math.PI/2;
   let activeIdx=-1;
@@ -913,7 +913,8 @@ async function loadFuelPrices(){
   el.innerHTML='<div class="empty"><div class="empty-icon">⛽</div>Loading live prices…</div>';
   try{
     const res=await fetch(`${SUPABASE_URL}/functions/v1/fuel-prices`,{
-      headers:{'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json'}
+      method:'GET',
+      headers:{'Content-Type':'application/json','x-client-info':'budget-app'}
     });
     if(!res.ok)throw new Error('Function error '+res.status);
     const data=await res.json();
