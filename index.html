@@ -387,7 +387,674 @@ const CATS = [
 ];
 
 const BILLS = [
-  {id:'old-car',   name:'Old car loan',      amount:335.76, day:30,   note:'30th each month',                       freq:'monthly', rachel:false},
+  {id:'old-car',   name:'Old car loan',      amount:150,    day:30,   note:'30th each month',                       freq:'monthly', rachel:false},
+  {id:'insurance', name:'Car insurance',     amount:232.05, day:17,   note:'17th each month',                       freq:'monthly', rachel:false},
+  {id:'medify',    name:'Medify',            amount:58.89,  day:20,   note:'20th — cancel after September',         freq:'monthly', rachel:false},
+  {id:'phone',     name:'Phone (Tangerine)', amount:15.15,  day:19,   note:'19th each month',                       freq:'monthly', rachel:false},
+  {id:'fitness',   name:'Fitness Passport',  amount:82,     day:26,   note:'26th — collect $40 from Rachel first',  freq:'monthly', rachel:true},
+  {id:'spotify',   name:'Spotify',           amount:8,      day:30,   note:'30th each month',                       freq:'monthly', rachel:false},
+];
+
+const WEEKLY_FIXED = BILLS.reduce((s,b) => s + b.amount, 0) / 4;
+const FREE_BUDGET = 60;
+const INVEST_TARGET = 600;
+
+// Pay schedule: PA Hospital every 2 weeks Wed 12:40am, Greenslopes alternating Wed 6pm
+// Reference: PA paid this Wednesday (we'll compute from a known date)
+const PA_REFERENCE_DATE = '2025-07-02'; // The Wednesday PA was paid — UPDATE THIS to actual date
+
+// ─── SUPABASE ────────────────────────────────────────────────────────────────
+let SUPABASE_URL = '', SUPABASE_KEY = '';
+
+function lsGet(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}}
+function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+
+async function sbFetch(method, path, body){
+  const res = await fetch(SUPABASE_URL+'/rest/v1/'+path,{
+    method,
+    headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':method==='POST'?'return=representation':'return=minimal'},
+    body:body?JSON.stringify(body):undefined
+  });
+  if(!res.ok&&res.status!==204){const e=await res.text();throw new Error(e)}
+  if(method==='DELETE'||res.status===204)return null;
+  return res.json();
+}
+
+async function dbUpsert(table,data){
+  const res = await fetch(SUPABASE_URL+'/rest/v1/'+table,{
+    method:'POST',
+    headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates,return=representation'},
+    body:JSON.stringify(data)
+  });
+  if(!res.ok)throw new Error(await res.text());
+  return res.json();
+}
+
+// ─── SETUP ───────────────────────────────────────────────────────────────────
+async function setupConnect(){
+  const url=document.getElementById('setup-url').value.trim().replace(/\/$/,'');
+  const key=document.getElementById('setup-key').value.trim();
+  const errEl=document.getElementById('setup-error');
+  errEl.textContent='';
+  if(!url||!key){errEl.textContent='Please enter both fields.';return}
+  SUPABASE_URL=url; SUPABASE_KEY=key;
+  try{
+    const res=await fetch(url+'/rest/v1/budget_state?select=id&limit=1',{headers:{'apikey':key,'Authorization':'Bearer '+key}});
+    if(!res.ok&&res.status!==200){errEl.textContent='Could not connect. Check your URL and key.';return}
+    lsSet('sb_url',url); lsSet('sb_key',key);
+    launchApp();
+  }catch(e){errEl.textContent='Connection failed. Check your URL and try again.'}
+}
+
+function launchApp(){
+  document.getElementById('setup-screen').style.display='none';
+  document.getElementById('main-nav').style.display='';
+  document.getElementById('main-content').style.display='';
+  initApp();
+}
+
+// ─── STATE ───────────────────────────────────────────────────────────────────
+let state={income:0,fuel:0,expenses:[],bills_paid:{},history:[],invest_total:0,invest_hits:0};
+
+function setSyncStatus(status,label){
+  const dot=document.getElementById('sync-dot');
+  const lbl=document.getElementById('sync-label');
+  if(!dot)return;
+  dot.className='sync-dot '+status;
+  lbl.textContent=label;
+}
+
+function todayStr(){const d=new Date();return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
+function monthKey(d){const dt=d||new Date();return`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}`}
+function weekStart(){const d=new Date();const day=d.getDay();const diff=day===0?-6:1-day;d.setDate(d.getDate()+diff);d.setHours(0,0,0,0);return d}
+function fmt(n){return'$'+Math.abs(n).toFixed(2)}
+function fmtSigned(n){return(n<0?'-$':'$')+Math.abs(n).toFixed(2)}
+function ordinal(n){const s=['th','st','nd','rd'],v=n%100;return n+(s[(v-20)%10]||s[v]||s[0])}
+function getWeekExpenses(){const ws=weekStart();return state.expenses.filter(e=>new Date((e.date||todayStr())+'T00:00:00')>=ws)}
+
+// ─── PAY SCHEDULE ────────────────────────────────────────────────────────────
+function getNextPay(){
+  const now=new Date();
+  const ref=new Date(PA_REFERENCE_DATE+'T00:30:00'); // PA pays Wed ~12:40am
+  const msSinceRef=now-ref;
+  const fortnight=14*24*60*60*1000;
+  const cyclePos=((msSinceRef%fortnight)+fortnight)%fortnight;
+  const msToNextPA=fortnight-cyclePos;
+  const nextPA=new Date(now.getTime()+msToNextPA);
+  const nextGreenslopes=new Date(nextPA.getTime()+7*24*60*60*1000);
+  const nextGS2=new Date(nextPA.getTime()-7*24*60*60*1000);
+  // Which is closer?
+  const candidates=[
+    {name:'PA Hospital',date:nextPA,time:'12:40am'},
+    {name:'Greenslopes Private',date:nextGreenslopes,time:'~6pm'},
+    {name:'Greenslopes Private',date:nextGS2,time:'~6pm'},
+  ].filter(c=>c.date>now).sort((a,b)=>a.date-b.date);
+  return candidates[0];
+}
+
+function renderPayBanner(){
+  const next=getNextPay();
+  if(!next)return;
+  const banner=document.getElementById('pay-banner');
+  const text=document.getElementById('pay-banner-text');
+  const days=Math.ceil((next.date-new Date())/(24*60*60*1000));
+  const dayStr=days===0?'today':days===1?'tomorrow':`in ${days} days`;
+  text.innerHTML=`Next pay: <strong>${next.name}</strong> — ${dayStr} (${next.time} Wednesday)`;
+  banner.style.display='';
+}
+
+// ─── LOAD FROM DB ────────────────────────────────────────────────────────────
+async function loadAll(){
+  setSyncStatus('syncing','Syncing…');
+  try{
+    const stateRows=await sbFetch('GET','budget_state?select=*&id=eq.main');
+    if(stateRows&&stateRows.length>0){state.income=stateRows[0].income||0;state.fuel=stateRows[0].fuel||0;state.invest_total=stateRows[0].invest_total||0;state.invest_hits=stateRows[0].invest_hits||0}
+    const exps=await sbFetch('GET','budget_expenses?select=*&order=created_at.desc');
+    state.expenses=exps||[];
+    const cur=monthKey();
+    const billRows=await sbFetch('GET',`budget_bills?select=*&month=eq.${cur}`);
+    state.bills_paid={};
+    (billRows||[]).forEach(r=>{state.bills_paid[r.bill_id]=r.paid});
+    const hist=await sbFetch('GET','budget_history?select=*&order=month.desc&limit=3');
+    state.history=(hist||[]).map(h=>({...h,bills:JSON.parse(h.bills||'[]'),expenses:JSON.parse(h.expenses_json||'[]')}));
+    setSyncStatus('synced','Synced');
+    return true;
+  }catch(e){setSyncStatus('error','Sync error');console.error(e);return false}
+}
+
+async function checkMonthRollover(){
+  const lastMonth=lsGet('last_month','');
+  const cur=monthKey();
+  if(lastMonth&&lastMonth!==cur){
+    try{
+      const prevBillRows=await sbFetch('GET',`budget_bills?select=*&month=eq.${lastMonth}`);
+      const prevPaid={};
+      (prevBillRows||[]).forEach(r=>{prevPaid[r.bill_id]=r.paid});
+      const prevExps=state.expenses.filter(e=>e.date&&e.date.startsWith(lastMonth));
+      const archive={month:lastMonth,bills:JSON.stringify(BILLS.map(b=>({...b,paid:!!prevPaid[b.id]}))),expenses_json:JSON.stringify(prevExps),total_expenses:prevExps.reduce((s,e)=>s+(e.amount||0),0),total_bills:BILLS.reduce((s,b)=>s+b.amount,0)};
+      await fetch(SUPABASE_URL+'/rest/v1/budget_history',{method:'POST',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':'resolution=ignore-duplicates'},body:JSON.stringify(archive)});
+      await dbUpsert('budget_state',{id:'main',income:0,fuel:0,invest_total:state.invest_total,invest_hits:state.invest_hits,updated_at:new Date().toISOString()});
+      state.income=0;state.fuel=0;
+    }catch(e){console.error('Rollover error',e)}
+  }
+  lsSet('last_month',cur);
+}
+
+async function initApp(){
+  await loadAll();
+  await checkMonthRollover();
+  renderOverview();
+  renderPayBanner();
+  loadFuelPrices();
+}
+
+// ─── NAV ─────────────────────────────────────────────────────────────────────
+function showPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  document.getElementById('nav-'+id).classList.add('active');
+  if(id==='overview')renderOverview();
+  if(id==='bills')renderBills();
+  if(id==='log')renderLog();
+  if(id==='history')renderHistory();
+}
+
+// ─── DONUT CHART ─────────────────────────────────────────────────────────────
+function polarToXY(cx,cy,r,angle){return{x:cx+r*Math.cos(angle),y:cy+r*Math.sin(angle)}}
+
+function drawDonut(svgId,legendId,centerValId,centerLblId,segments,centerLabel){
+  const svg=document.getElementById(svgId);
+  const segsGroup=svg?svg.querySelector('g'):null;
+  if(!segsGroup)return;
+  segsGroup.innerHTML='';
+  const legend=document.getElementById(legendId);
+  if(legend)legend.innerHTML='';
+  const total=segments.reduce((s,seg)=>s+seg.value,0);
+  const cv=document.getElementById(centerValId);
+  const cl=document.getElementById(centerLblId);
+  if(total===0){if(cv)cv.textContent='$0';if(cl)cl.textContent=centerLabel;return;}
+
+  const cx=80,cy=80,r=65,strokeW=20;
+  const circ=2*Math.PI*r;
+  const gapDeg=2;
+  const gapRad=gapDeg*Math.PI/180;
+  let startAngle=-Math.PI/2;
+
+  // Animate center counting up
+  function countUp(el,to,dur){
+    const start=performance.now();
+    function tick(now){
+      const p=Math.min((now-start)/dur,1);
+      const ease=p<1?1-Math.pow(1-p,3):1;
+      el.textContent='$'+(to*ease).toFixed(0);
+      if(p<1)requestAnimationFrame(tick);
+      else el.textContent=fmt(to);
+    }
+    requestAnimationFrame(tick);
+  }
+
+  function setCenter(idx){
+    if(!cv||!cl)return;
+    if(idx===-1){cv.textContent=fmt(total);cl.textContent=centerLabel;}
+    else{cv.textContent=fmt(segments[idx].value);cl.textContent=segments[idx].label;}
+  }
+
+  const circles=[];
+  segments.forEach((seg,i)=>{
+    const pct=seg.value/total;
+    const sweepAngle=Math.max(0,pct*2*Math.PI-gapRad);
+    const dashLen=(sweepAngle/(2*Math.PI))*circ;
+    const rotDeg=(startAngle+Math.PI/2)*180/Math.PI;
+
+    const circle=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    circle.setAttribute('cx',cx);
+    circle.setAttribute('cy',cy);
+    circle.setAttribute('r',r);
+    circle.setAttribute('fill','none');
+    circle.setAttribute('stroke',seg.color);
+    circle.setAttribute('stroke-width',strokeW);
+    circle.setAttribute('stroke-linecap','butt');
+    circle.setAttribute('transform',`rotate(${rotDeg},${cx},${cy})`);
+    // Start fully drawn but invisible, fade in
+    circle.setAttribute('stroke-dasharray',`${dashLen} ${circ-dashLen}`);
+    circle.setAttribute('stroke-dashoffset',`${circ/4}`);
+    circle.style.opacity='0';
+    circle.style.transition=`opacity 0.4s ease ${i*60}ms, stroke-width 0.15s ease, filter 0.15s ease`;
+    circle.style.cursor='pointer';
+    segsGroup.appendChild(circle);
+    circles.push({circle,seg,dashLen});
+    startAngle+=pct*2*Math.PI;
+
+    // Trigger fade in
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{circle.style.opacity='1';}));
+
+    const activate=(on)=>{
+      circles.forEach(({circle:c,seg:s},j)=>{
+        if(on){
+          c.setAttribute('stroke-width',j===i?strokeW+6:strokeW-2);
+          c.style.filter=j===i?`drop-shadow(0 0 8px ${s.color})`:'none';
+          c.style.opacity=j===i?'1':'0.3';
+        } else {
+          c.setAttribute('stroke-width',strokeW);
+          c.style.filter='none';
+          c.style.opacity='1';
+        }
+      });
+      setCenter(on?i:-1);
+      if(legend){
+        document.querySelectorAll(`#${legendId} .donut-legend-item`).forEach((el,j)=>{
+          el.style.opacity=on?(j===i?'1':'0.4'):'1';
+          el.classList.toggle('active',on&&j===i);
+        });
+      }
+    };
+
+    circle.addEventListener('mouseenter',()=>activate(true));
+    circle.addEventListener('mouseleave',()=>activate(false));
+    circle.addEventListener('click',()=>activate(true));
+
+    if(legend){
+      const item=document.createElement('div');
+      item.className='donut-legend-item';
+      item.style.transition='opacity .2s';
+      item.innerHTML=`<div class="legend-swatch" style="background:${seg.color}"></div><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${seg.label}</span><span class="legend-val">${fmt(seg.value)}</span>`;
+      item.addEventListener('mouseenter',()=>activate(true));
+      item.addEventListener('mouseleave',()=>activate(false));
+      legend.appendChild(item);
+    }
+  });
+
+  // Count up center value
+  if(cv)countUp(cv,total,700);
+  if(cl)cl.textContent=centerLabel;
+}set="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Michael's Budget</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💸</text></svg>">
+<style>
+:root{--bg:#0f0f0f;--surface:#181818;--surface2:#222;--border:#2a2a2a;--border2:#333;--text:#f0f0f0;--text2:#999;--text3:#555;--green:#4ade80;--green-bg:#0d2218;--green-border:#1a3d2b;--amber:#fbbf24;--amber-bg:#1f1600;--amber-border:#3a2800;--red:#f87171;--red-bg:#1f0a0a;--red-border:#3d1515;--blue:#60a5fa;--blue-bg:#0a1628;--blue-border:#1a2e4a;--purple:#a78bfa;--purple-bg:#150e2a;--radius:12px;--radius-sm:8px}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',sans-serif;font-size:15px;min-height:100vh}
+nav{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom)}
+nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 0 8px;background:none;border:none;color:var(--text3);font-size:10px;font-family:inherit;cursor:pointer;transition:color .15s}
+nav button.active{color:var(--green)}
+nav button svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+main{padding:0 0 80px}
+.page{display:none}.page.active{display:block}
+.page-header{padding:56px 20px 16px}
+.page-header h1{font-size:28px;font-weight:700;letter-spacing:-.5px}
+.page-header p{color:var(--text2);font-size:13px;margin-top:3px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin:0 16px 12px}
+.card-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin-bottom:12px}
+.metrics{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 16px 12px}
+.metric{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px}
+.metric-label{font-size:11px;color:var(--text2);margin-bottom:4px}
+.metric-value{font-size:22px;font-weight:600;letter-spacing:-.5px;color:var(--text)}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:12px;color:var(--text2);margin-bottom:6px}
+input[type=number],input[type=text],select{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);font-family:inherit;font-size:15px;padding:11px 13px;outline:none;-webkit-appearance:none;appearance:none}
+input:focus,select:focus{border-color:var(--green)}
+select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23666' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 13px center;padding-right:36px}
+.input-row{display:flex;gap:8px}.input-row .field{flex:1}
+.btn{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:13px;border-radius:var(--radius-sm);font-family:inherit;font-size:15px;font-weight:500;cursor:pointer;border:none;transition:opacity .15s}
+.btn:active{opacity:.75}.btn-primary{background:var(--green);color:#000}.btn-ghost{background:var(--surface2);color:var(--text2);border:1px solid var(--border2)}.btn-sm{padding:8px 14px;font-size:13px;width:auto}
+.progress-bar{height:6px;background:var(--surface2);border-radius:99px;overflow:hidden}
+.progress-fill{height:100%;border-radius:99px;background:var(--green);transition:width .4s ease}
+.progress-fill.amber{background:var(--amber)}.progress-fill.red{background:var(--red)}
+.progress-labels{display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-top:5px}
+.bill-list{display:flex;flex-direction:column;gap:8px}
+.bill-card{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:13px 14px;cursor:pointer;transition:border-color .15s,background .15s;display:flex;align-items:center;gap:12px;-webkit-user-select:none;user-select:none}
+.bill-card:active{opacity:.8}.bill-card.paid{background:var(--green-bg);border-color:var(--green-border)}.bill-card.due-soon{border-color:var(--amber-border)}
+.bill-check{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--border2);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s,border-color .15s}
+.bill-card.paid .bill-check{background:var(--green);border-color:var(--green)}
+.bill-check svg{width:12px;height:12px;stroke:#000;fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;opacity:0;transition:opacity .15s}
+.bill-card.paid .bill-check svg{opacity:1}
+.bill-info{flex:1;min-width:0}.bill-name{font-size:14px;font-weight:500}.bill-card.paid .bill-name{color:var(--green)}.bill-sub{font-size:11px;color:var(--text2);margin-top:2px}.bill-right{text-align:right;flex-shrink:0}.bill-amount{font-size:15px;font-weight:600}
+.bill-badge{font-size:10px;padding:2px 7px;border-radius:99px;margin-top:3px;display:inline-block}
+.badge-due{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-border)}.badge-paid{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border)}.badge-upcoming{background:var(--surface);color:var(--text3);border:1px solid var(--border)}
+.expense-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)}
+.expense-row:last-child{border-bottom:none}
+.exp-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.exp-info{flex:1;min-width:0}.exp-desc{font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.exp-meta{font-size:11px;color:var(--text2);margin-top:2px}
+.exp-amount{font-size:15px;font-weight:600;color:var(--red);flex-shrink:0}
+.exp-delete{width:28px;height:28px;border-radius:50%;background:none;border:none;color:var(--text3);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;flex-shrink:0}
+.exp-delete:active{color:var(--red)}
+.cat-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.cat-chip{padding:6px 12px;border-radius:99px;font-size:12px;font-weight:500;border:1px solid var(--border2);background:var(--surface2);color:var(--text2);cursor:pointer;transition:all .15s;white-space:nowrap}
+.cat-chip.selected{background:var(--green-bg);border-color:var(--green-border);color:var(--green)}
+.month-section{margin:0 16px 16px}.month-header{display:flex;justify-content:space-between;align-items:center;padding:10px 0}.month-label{font-size:13px;font-weight:600;color:var(--text2)}.month-bills{font-size:11px;color:var(--text3);margin-top:2px}
+.rachel-banner{background:var(--amber-bg);border:1px solid var(--amber-border);border-radius:var(--radius-sm);padding:12px 14px;display:flex;align-items:center;gap:10px;margin:0 16px 12px}
+.rachel-banner p{font-size:13px;color:var(--amber);line-height:1.4}.rachel-icon{font-size:20px;flex-shrink:0}
+.empty{text-align:center;padding:40px 20px;color:var(--text3);font-size:13px}.empty-icon{font-size:32px;margin-bottom:8px}
+.section-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);padding:0 16px;margin:20px 0 8px}
+.total-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-top:1px solid var(--border);margin-top:4px}
+.total-row span:first-child{font-size:13px;color:var(--text2)}.total-row span:last-child{font-size:15px;font-weight:600}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;display:flex;align-items:flex-end;opacity:0;pointer-events:none;transition:opacity .2s}
+.modal-overlay.open{opacity:1;pointer-events:all}
+.modal{background:var(--surface);border-radius:var(--radius) var(--radius) 0 0;padding:20px 20px calc(20px + env(safe-area-inset-bottom));width:100%;transform:translateY(100%);transition:transform .25s ease}
+.modal-overlay.open .modal{transform:translateY(0)}
+.modal-handle{width:36px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto 18px}
+.modal-title{font-size:17px;font-weight:600;margin-bottom:16px}
+.sync-dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:5px;vertical-align:middle}
+.sync-dot.synced{background:var(--green)}.sync-dot.syncing{background:var(--amber);animation:pulse 1s infinite}.sync-dot.error{background:var(--red)}.sync-dot.offline{background:var(--text3)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.sync-bar{display:flex;align-items:center;justify-content:flex-end;padding:0 16px;margin-bottom:4px;font-size:11px;color:var(--text3)}
+
+/* SETUP */
+#setup-screen{position:fixed;inset:0;background:var(--bg);z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px}
+#setup-screen h2{font-size:22px;font-weight:700;margin-bottom:8px;text-align:center}
+#setup-screen p{font-size:13px;color:var(--text2);text-align:center;line-height:1.6;margin-bottom:24px}
+.setup-field{width:100%;max-width:400px;margin-bottom:12px}
+.setup-field label{display:block;font-size:12px;color:var(--text2);margin-bottom:6px}
+.setup-hint{font-size:11px;color:var(--text3);margin-top:4px}
+#setup-error{color:var(--red);font-size:13px;margin-top:8px;text-align:center;min-height:20px}
+.setup-logo{font-size:40px;margin-bottom:16px}
+.setup-divider{width:100%;max-width:400px;border:none;border-top:1px solid var(--border);margin:20px 0}
+
+/* DONUT CHART */
+.donut-wrap{display:flex;flex-direction:column;align-items:center;gap:20px;padding:8px 0}
+.donut-svg{flex-shrink:0;cursor:pointer;overflow:visible}
+.donut-center{text-anchor:middle;dominant-baseline:middle}
+.donut-total{font-size:16px;font-weight:700;fill:var(--text)}
+.donut-label{font-size:11px;fill:var(--text2)}
+.donut-legend{width:100%;display:grid;grid-template-columns:1fr 1fr;gap:8px 16px}
+.donut-legend-item{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2);cursor:pointer;border-radius:6px;padding:5px 8px;transition:background .15s;min-width:0}
+.donut-legend-item:hover{background:var(--surface2)}
+.donut-legend-item.active{color:var(--text);background:var(--surface2)}
+.legend-swatch{width:10px;height:10px;border-radius:3px;flex-shrink:0}
+.legend-val{margin-left:auto;font-weight:600;color:var(--text);font-size:12px;flex-shrink:0}
+
+/* PAY SCHEDULE */
+.pay-banner{background:var(--purple-bg);border:1px solid #2d1f5e;border-radius:var(--radius-sm);padding:12px 14px;margin:0 16px 12px;display:flex;align-items:center;gap:10px}
+.pay-banner p{font-size:13px;color:var(--purple);line-height:1.4}
+
+/* INVEST TRACKER */
+.invest-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin:0 16px 12px;position:relative;overflow:hidden}
+.invest-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin-bottom:4px}
+.invest-amount{font-size:28px;font-weight:700;color:var(--green);letter-spacing:-.5px;margin-bottom:2px}
+.invest-sub{font-size:12px;color:var(--text2);margin-bottom:12px}
+.invest-bar-track{height:10px;background:var(--surface2);border-radius:99px;overflow:hidden;margin-bottom:6px}
+.invest-bar-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,#4ade80,#22d3ee);transition:width .6s cubic-bezier(.34,1.56,.64,1)}
+.invest-labels{display:flex;justify-content:space-between;font-size:11px;color:var(--text3)}
+.invest-count{position:absolute;top:16px;right:16px;font-size:11px;color:var(--text3)}
+.invest-input-row{display:flex;gap:8px;margin-top:12px}
+.invest-input-row input{flex:1}
+
+/* FUEL SECTION */
+.fuel-section{margin:0 16px 12px}
+.fuel-card{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:14px;margin-bottom:8px;transition:border-color .15s}
+.fuel-card.highlighted{border-color:#166534;background:#052e16;border-left:3px solid var(--green)}
+.fuel-rank{font-size:11px;color:var(--text3);margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em}
+.fuel-name{font-size:14px;font-weight:500;color:var(--text);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fuel-addr{font-size:11px;color:var(--text2);margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fuel-price-row{display:flex;align-items:flex-end;gap:12px}
+.fuel-price{font-size:32px;font-weight:800;letter-spacing:-1px;line-height:1;color:var(--text)}
+.fuel-price-unit{font-size:13px;color:var(--text2);margin-bottom:4px}
+.fuel-fill{font-size:13px;color:var(--green);margin-left:auto;font-weight:600;align-self:flex-end}
+.fuel-highlight-badge{font-size:10px;background:var(--green-bg);color:var(--green);border:1px solid var(--green-border);border-radius:99px;padding:2px 8px;display:inline-block;margin-top:4px}
+.fuel-updated{font-size:10px;color:var(--text3);margin-top:6px}
+.fuel-refresh-btn{background:none;border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text2);font-family:inherit;font-size:12px;padding:6px 12px;cursor:pointer;display:flex;align-items:center;gap:5px}
+.fuel-refresh-btn:active{opacity:.7}
+.fuel-manual{background:var(--blue-bg);border:1px solid var(--blue-border);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:8px}
+.fuel-manual p{font-size:12px;color:var(--blue);margin-bottom:8px;line-height:1.5}
+
+/* CONFETTI */
+#confetti-canvas{position:fixed;inset:0;pointer-events:none;z-index:999;display:none}
+
+/* SPEND BAR */
+.spend-bar-track{height:8px;background:var(--surface2);border-radius:99px;overflow:hidden;display:flex;margin:10px 0 6px}
+.spend-seg{height:100%;transition:width .4s}
+.spend-seg.bills{background:var(--red)}.spend-seg.tithe{background:var(--purple)}.spend-seg.free{background:var(--amber)}.spend-seg.save{background:var(--green)}
+.spend-legend{display:flex;flex-wrap:wrap;gap:8px 14px}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2)}
+.legend-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.dot-bills{background:var(--red)}.dot-tithe{background:var(--purple)}.dot-free{background:var(--amber)}.dot-save{background:var(--green)}
+
+@media(min-width:480px){
+  .metrics{grid-template-columns:repeat(4,1fr)}
+  .page-header{padding-top:40px}
+  nav{position:sticky;top:0;border-top:none;border-bottom:1px solid var(--border);flex-direction:row}
+  nav button{flex-direction:row;gap:6px;padding:14px 20px;font-size:13px}
+  main{padding-bottom:0}
+}
+</style>
+</head>
+<body>
+
+<canvas id="confetti-canvas"></canvas>
+
+<div id="setup-screen">
+  <div class="setup-logo">💸</div>
+  <h2>Michael's Budget</h2>
+  <p>Connect your Supabase database to sync across your phone and Mac.</p>
+  <div class="setup-field">
+    <label>Supabase Project URL</label>
+    <input type="text" id="setup-url" placeholder="https://xxxxxxxxxxxx.supabase.co" autocomplete="off" autocapitalize="off">
+    <div class="setup-hint">Project Settings → API → Project URL</div>
+  </div>
+  <div class="setup-field">
+    <label>Supabase Anon Key</label>
+    <input type="text" id="setup-key" placeholder="eyJhbGci..." autocomplete="off" autocapitalize="off">
+    <div class="setup-hint">Legacy anon, service_role API keys → anon public</div>
+  </div>
+  <div id="setup-error"></div>
+  <hr class="setup-divider">
+  <button class="btn btn-primary" style="max-width:400px;width:100%" onclick="setupConnect()">Connect & get started</button>
+</div>
+
+<nav style="display:none" id="main-nav">
+  <button class="active" onclick="showPage('overview')" id="nav-overview">
+    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Overview
+  </button>
+  <button onclick="showPage('bills')" id="nav-bills">
+    <svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg>Bills
+  </button>
+  <button onclick="showPage('log')" id="nav-log">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l2.5 2.5"/></svg>Spending
+  </button>
+  <button onclick="showPage('fuel')" id="nav-fuel">
+    <svg viewBox="0 0 24 24"><path d="M3 22V8l7-5 7 5v14H3z"/><path d="M9 22v-6h4v6"/><path d="M17 8h1a2 2 0 012 2v4a2 2 0 01-2 2h-1"/><path d="M17 12h2"/></svg>Fuel
+  </button>
+  <button onclick="showPage('history')" id="nav-history">
+    <svg viewBox="0 0 24 24"><path d="M3 3v6h6"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 3"/></svg>History
+  </button>
+</nav>
+
+<main id="main-content" style="display:none">
+
+<!-- OVERVIEW -->
+<div class="page active" id="page-overview">
+  <div class="page-header">
+    <h1>This week</h1>
+    <p id="overview-date"></p>
+  </div>
+  <div class="sync-bar"><span class="sync-dot" id="sync-dot"></span><span id="sync-label">Connecting…</span></div>
+
+  <div id="pay-banner" class="pay-banner" style="display:none">
+    <span style="font-size:20px">💰</span>
+    <p id="pay-banner-text"></p>
+  </div>
+
+  <div class="metrics">
+    <div class="metric"><div class="metric-label">Income</div><div class="metric-value" id="m-income">$—</div></div>
+    <div class="metric"><div class="metric-label">Tithe (10%)</div><div class="metric-value" id="m-tithe" style="color:var(--purple)">$—</div></div>
+    <div class="metric"><div class="metric-label">Bills this week</div><div class="metric-value" id="m-bills" style="color:var(--red)">$—</div></div>
+    <div class="metric"><div class="metric-label">Savings</div><div class="metric-value" id="m-save" style="color:var(--green)">$—</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">This week's income</div>
+    <div class="input-row">
+      <div class="field" style="flex:2"><label>Amount earned ($)</label><input type="number" id="income-input" placeholder="e.g. 620" min="0" step="1" oninput="handleIncomeInput()"></div>
+      <div class="field" style="flex:1"><label>Fuel (if filling up)</label><input type="number" id="fuel-input" placeholder="$0" min="0" step="0.01" oninput="handleIncomeInput()"></div>
+    </div>
+  </div>
+
+  <!-- OVERVIEW DONUT -->
+  <div class="card" id="overview-donut-card" style="display:none">
+    <div class="card-title">Where your money goes</div>
+    <div class="donut-wrap">
+      <svg class="donut-svg" width="160" height="160" viewBox="0 0 160 160" id="overview-donut-svg">
+        <circle cx="80" cy="80" r="65" fill="none" stroke="var(--surface2)" stroke-width="20"/>
+        <g id="overview-donut-segs"></g>
+        <text x="80" y="74" class="donut-total" id="overview-donut-center-val">$0</text>
+        <text x="80" y="92" class="donut-label" id="overview-donut-center-lbl">income</text>
+      </svg>
+      <div class="donut-legend" id="overview-donut-legend"></div>
+    </div>
+  </div>
+
+  <!-- INVEST TRACKER -->
+  <div class="invest-card">
+    <div class="invest-title">Investing target</div>
+    <div class="invest-count" id="invest-count">🎯 0 hits</div>
+    <div class="invest-amount" id="invest-amount">$0.00</div>
+    <div class="invest-sub" id="invest-sub">of $600 goal</div>
+    <div class="invest-bar-track"><div class="invest-bar-fill" id="invest-bar" style="width:0%"></div></div>
+    <div class="invest-labels"><span>$0</span><span>$600</span></div>
+    <div class="invest-input-row">
+      <input type="number" id="invest-input" placeholder="Add investment amount ($)" min="0" step="0.01">
+      <button class="btn btn-primary btn-sm" onclick="addInvestment()">Add</button>
+    </div>
+  </div>
+
+  <div class="section-label">This week's spending</div>
+  <div style="margin:0 16px 12px;display:flex;gap:8px;align-items:center;justify-content:space-between">
+    <div style="font-size:13px;color:var(--text2)">Logged: <strong id="spent-total" style="color:var(--red)">$0.00</strong> of $60 free budget</div>
+    <button class="btn btn-ghost btn-sm" onclick="openAddExpense()">+ Add</button>
+  </div>
+  <div style="margin:0 16px 12px">
+    <div class="progress-bar"><div class="progress-fill" id="spend-prog" style="width:0%"></div></div>
+    <div class="progress-labels"><span id="spend-prog-label">$0 spent</span><span>$60 limit</span></div>
+  </div>
+  <div style="margin:0 16px" id="overview-expenses">
+    <div class="empty"><div class="empty-icon">💸</div>Nothing logged yet this week</div>
+  </div>
+</div>
+
+<!-- BILLS -->
+<div class="page" id="page-bills">
+  <div class="page-header"><h1>Bills</h1><p id="bills-month-label"></p></div>
+  <div id="rachel-banner" class="rachel-banner" style="display:none">
+    <span class="rachel-icon">💛</span>
+    <p>Today's the day — <strong>collect the $40 from Rachel</strong> before your Fitness Passport payment goes through.</p>
+  </div>
+  <div class="metrics" style="grid-template-columns:1fr 1fr">
+    <div class="metric"><div class="metric-label">Total bills this month</div><div class="metric-value" id="bills-total-month">$—</div></div>
+    <div class="metric"><div class="metric-label">Weekly set-aside</div><div class="metric-value" id="bills-weekly-share" style="color:var(--red)">$—</div></div>
+  </div>
+
+  <!-- BILLS DONUT -->
+  <div class="card">
+    <div class="card-title">Bills breakdown</div>
+    <div class="donut-wrap">
+      <svg class="donut-svg" width="160" height="160" viewBox="0 0 160 160" id="bills-donut-svg">
+        <circle cx="80" cy="80" r="65" fill="none" stroke="var(--surface2)" stroke-width="20"/>
+        <g id="bills-donut-segs"></g>
+        <text x="80" y="74" class="donut-total" id="bills-donut-center-val">$0</text>
+        <text x="80" y="92" class="donut-label" id="bills-donut-center-lbl">total</text>
+      </svg>
+      <div class="donut-legend" id="bills-donut-legend"></div>
+    </div>
+  </div>
+
+  <div class="section-label">Monthly commitments</div>
+  <div style="margin:0 16px" id="bill-list-container"></div>
+  <div class="section-label" style="margin-top:24px">Coming up</div>
+  <div style="margin:0 16px 12px"><div class="card" style="margin:0"><p style="font-size:13px;color:var(--text2);line-height:1.6" id="upcoming-text"></p></div></div>
+</div>
+
+<!-- SPENDING LOG -->
+<div class="page" id="page-log">
+  <div class="page-header"><h1>Spending log</h1><p>Track every dollar outside bills</p></div>
+  <div class="metrics" style="grid-template-columns:1fr 1fr">
+    <div class="metric"><div class="metric-label">Spent this week</div><div class="metric-value" id="log-week-total" style="color:var(--red)">$0</div></div>
+    <div class="metric"><div class="metric-label">Remaining ($60)</div><div class="metric-value" id="log-week-remaining" style="color:var(--green)">$60</div></div>
+  </div>
+
+  <!-- SPENDING DONUT -->
+  <div class="card" id="spending-donut-card">
+    <div class="card-title">Spending by category</div>
+    <div class="donut-wrap">
+      <svg class="donut-svg" width="160" height="160" viewBox="0 0 160 160" id="spending-donut-svg">
+        <circle cx="80" cy="80" r="65" fill="none" stroke="var(--surface2)" stroke-width="20"/>
+        <g id="spending-donut-segs"></g>
+        <text x="80" y="74" class="donut-total" id="spending-donut-center-val">$0</text>
+        <text x="80" y="92" class="donut-label" id="spending-donut-center-lbl">this week</text>
+      </svg>
+      <div class="donut-legend" id="spending-donut-legend"></div>
+    </div>
+  </div>
+
+  <div style="margin:0 16px 12px"><button class="btn btn-primary" onclick="openAddExpense()">+ Log expense</button></div>
+  <div class="section-label">This week</div>
+  <div class="card" style="padding:0 16px" id="log-expense-list">
+    <div class="empty"><div class="empty-icon">✅</div>Nothing yet — you're doing great</div>
+  </div>
+</div>
+
+<!-- FUEL -->
+<div class="page" id="page-fuel">
+  <div class="page-header"><h1>Fuel prices</h1><p>Live 91 unleaded · Brisbane</p></div>
+  <div style="margin:0 16px 8px;display:flex;align-items:center;justify-content:space-between">
+    <span style="font-size:12px;color:var(--text3)" id="fuel-last-updated">Tap refresh to load prices</span>
+    <button class="fuel-refresh-btn" onclick="loadFuelPrices()">
+      <svg width="12" height="12" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round"><path d="M3 3v6h6"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 3"/></svg>
+      Refresh
+    </button>
+  </div>
+  <div id="fuel-results" class="fuel-section">
+    <div class="empty"><div class="empty-icon">⛽</div>Loading prices…</div>
+  </div>
+  <div class="section-label">Enter what you actually paid</div>
+  <div class="fuel-manual">
+    <p>⛽ Found a better price or went somewhere else? Enter your actual fill cost below — this is what feeds into your budget calc.</p>
+    <div class="input-row">
+      <div class="field" style="flex:1"><label>Fuel cost ($)</label><input type="number" id="fuel-manual-input" placeholder="e.g. 85.40" min="0" step="0.01" oninput="syncFuelManual()"></div>
+      <div class="field" style="flex:1"><label>Litres filled</label><input type="number" id="fuel-litres-input" placeholder="e.g. 51" min="0" step="0.1" oninput="calcFuelManual()"></div>
+    </div>
+    <div style="font-size:12px;color:var(--blue);margin-top:4px" id="fuel-manual-calc"></div>
+  </div>
+  <div style="background:var(--blue-bg);border:1px solid var(--blue-border);border-radius:var(--radius-sm);padding:12px 14px;margin:0 16px 20px">
+    <p style="font-size:12px;color:var(--blue);line-height:1.5">💡 <strong style="color:#93c5fd">Best days to fill up:</strong> Tuesday or Wednesday when Brisbane prices bottom out in the weekly cycle. Your 51L tank at $1.75/L ≈ $89. Use MotorMouth for live servo comparisons.</p>
+  </div>
+</div>
+
+<!-- HISTORY -->
+<div class="page" id="page-history">
+  <div class="page-header"><h1>History</h1><p>Last 3 months</p></div>
+  <div id="history-container"><div class="empty"><div class="empty-icon">📅</div>History builds as months roll over</div></div>
+</div>
+
+</main>
+
+<!-- ADD EXPENSE MODAL -->
+<div class="modal-overlay" id="expense-modal" onclick="handleModalClick(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Log expense</div>
+    <div class="field"><label>What did you spend on?</label><input type="text" id="exp-desc" placeholder="e.g. lunch, petrol, textbook" autocomplete="off"></div>
+    <div class="field"><label>Amount ($)</label><input type="number" id="exp-amount" placeholder="0.00" min="0" step="0.01"></div>
+    <div class="field"><label>Category</label><div class="cat-chips" id="cat-chips"></div></div>
+    <button class="btn btn-primary" onclick="saveExpense()">Save</button>
+  </div>
+</div>
+
+<script>
+// ─── CONFIG ──────────────────────────────────────────────────────────────────
+const CATS = [
+  {id:'food',      label:'Food & drinks',   icon:'🍔', color:'#f97316'},
+  {id:'transport', label:'Transport & fuel', icon:'🚗', color:'#60a5fa'},
+  {id:'health',    label:'Health & fitness', icon:'💪', color:'#4ade80'},
+  {id:'study',     label:'Study & uni',      icon:'📚', color:'#a78bfa'},
+  {id:'social',    label:'Social & out',     icon:'🎉', color:'#f472b6'},
+  {id:'clothing',  label:'Clothing',         icon:'👕', color:'#fbbf24'},
+  {id:'investing', label:'Investing',        icon:'📈', color:'#34d399'},
+];
+
+const BILLS = [
+  {id:'old-car',   name:'Old car loan',      amount:150,    day:30,   note:'30th each month',                       freq:'monthly', rachel:false},
   {id:'insurance', name:'Car insurance',     amount:232.05, day:17,   note:'17th each month',                       freq:'monthly', rachel:false},
   {id:'medify',    name:'Medify',            amount:58.89,  day:20,   note:'20th — cancel after September',         freq:'monthly', rachel:false},
   {id:'phone',     name:'Phone (Tangerine)', amount:15.15,  day:19,   note:'19th each month',                       freq:'monthly', rachel:false},
@@ -959,33 +1626,50 @@ async function loadFuelPrices(){
   const updEl=document.getElementById('fuel-last-updated');
   el.innerHTML='<div class="empty"><div class="empty-icon">⛽</div>Loading live prices…</div>';
   try{
-    const res=await fetch(`${SUPABASE_URL}/functions/v1/fuel-prices`,{
-      method:'GET',
-      headers:{'Content-Type':'application/json','x-client-info':'budget-app'}
-    });
-    if(!res.ok)throw new Error('Function error '+res.status);
-    const data=await res.json();
-    if(!data.stations||!data.stations.length){el.innerHTML='<div class="empty"><div class="empty-icon">⛽</div>No prices available right now</div>';return}
+    const FUEL_TOKEN='2fe40e8f-bac1-4f29-91a2-41cf363335c2';
+    const BASE='https://fppdirectapi-prod.fuelpricesqld.com.au';
+    const PROXY='https://corsproxy.io/?url=';
+    const U91=2;
+    const HIGHLIGHT=['springfield','carina','annerley'];
+    const BNE=new Set(['4000','4001','4002','4003','4004','4005','4006','4007','4008','4009','4010','4011','4012','4013','4014','4015','4016','4017','4018','4019','4020','4021','4022','4029','4030','4031','4032','4033','4034','4035','4036','4037','4051','4053','4054','4055','4059','4060','4061','4064','4065','4066','4067','4068','4069','4070','4072','4073','4074','4075','4076','4077','4078','4101','4102','4103','4104','4105','4106','4107','4108','4109','4110','4111','4112','4113','4114','4115','4116','4117','4118','4119','4120','4121','4122','4123','4124','4125','4127','4128','4129','4151','4152','4153','4154','4155','4156','4157','4158','4159','4160','4161','4163','4164','4165','4169','4170','4171','4172','4173','4174','4178','4179','4300','4301','4303','4304','4305','4306','4500','4501','4502','4503','4504','4505','4506','4507','4508','4509','4510','4511','4520','4521','4557']);
+    const fpdFetch=async(path)=>{
+      const r=await fetch(PROXY+encodeURIComponent(BASE+path),{headers:{'Authorization':'FPDAPI SubscriberToken='+FUEL_TOKEN,'Content-Type':'application/json'}});
+      if(!r.ok)throw new Error('API '+r.status);
+      return r.json();
+    };
+    const [sitesData,pricesData]=await Promise.all([
+      fpdFetch('/Subscriber/GetFullSiteDetails?countryId=21&geoRegionLevel=3&geoRegionId=1'),
+      fpdFetch('/Price/GetSitesPrices?countryId=21&geoRegionLevel=3&geoRegionId=1')
+    ]);
+    const sites={};
+    for(const s of (sitesData.S||[]))sites[s.S]=s;
+    const results=(pricesData.SitePrices||pricesData||[])
+      .filter(p=>p.FuelId===U91&&p.Price!==9999&&p.Price!=='9999'&&sites[p.SiteId]&&BNE.has(String(sites[p.SiteId].P)))
+      .map(p=>{
+        const s=sites[p.SiteId];
+        const ppl=Number(p.Price)/10;
+        const isH=HIGHLIGHT.some(h=>(s.N||'').toLowerCase().includes(h)||(s.A||'').toLowerCase().includes(h));
+        return{name:s.N||'Unknown',address:s.A||'',priceCents:Number(p.Price),priceDisplay:ppl.toFixed(1),fill51L:((ppl/100)*51).toFixed(2),updated:p.TransactionDateUtc,isHighlighted:isH};
+      })
+      .sort((a,b)=>a.priceCents-b.priceCents).slice(0,5);
+    if(!results.length){el.innerHTML='<div class="empty"><div class="empty-icon">⛽</div>No prices found</div>';return}
     updEl.textContent='Updated '+new Date().toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'});
-    el.innerHTML=data.stations.map((s,i)=>{
-      const medal=['🥇','🥈','🥉','4️⃣','5️⃣'][i];
-      return`<div class="fuel-card${s.isHighlighted?' highlighted':''}">
-        <div class="fuel-rank">${medal} #${i+1} cheapest</div>
-        <div class="fuel-name">${s.name}</div>
-        <div class="fuel-addr">${s.address}</div>
-        <div class="fuel-price-row">
-          <div class="fuel-price">${s.priceDisplay}</div>
-          <div class="fuel-price-unit">c/L</div>
-          <div class="fuel-fill">51L ≈ $${s.fill51L}</div>
-        </div>
-        ${s.isHighlighted?'<div class="fuel-highlight-badge">📍 Near you</div>':''}
-        <div class="fuel-updated">Last reported: ${new Date(s.updated).toLocaleString('en-AU',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</div>
-      </div>`;
-    }).join('');
+    const medals=['🥇','🥈','🥉','4️⃣','5️⃣'];
+    el.innerHTML=results.map((s,i)=>`<div class="fuel-card${s.isHighlighted?' highlighted':''}">
+      <div class="fuel-rank">${medals[i]} #${i+1} cheapest</div>
+      <div class="fuel-name">${s.name}</div>
+      <div class="fuel-addr">${s.address}</div>
+      <div class="fuel-price-row">
+        <div class="fuel-price">${s.priceDisplay}</div>
+        <div class="fuel-price-unit">c/L</div>
+        <div class="fuel-fill">51L ≈ $${s.fill51L}</div>
+      </div>
+      ${s.isHighlighted?'<div class="fuel-highlight-badge">📍 Near you</div>':''}
+      <div class="fuel-updated">Last reported: ${new Date(s.updated).toLocaleString('en-AU',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</div>
+    </div>`).join('');
   }catch(e){
-    el.innerHTML=`<div class="empty"><div class="empty-icon">⚠️</div>Could not load prices — check your connection</div>`;
-    updEl.textContent='Failed to load';
-    console.error(e);
+    el.innerHTML='<div class="empty"><div class="empty-icon">⚠️</div>Could not load prices — check your connection</div>';
+    updEl.textContent='Failed to load';console.error(e);
   }
 }
 
