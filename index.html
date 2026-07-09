@@ -86,17 +86,23 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 .setup-divider{width:100%;max-width:400px;border:none;border-top:1px solid var(--border);margin:20px 0}
 
 /* DONUT CHART */
-.donut-wrap{display:flex;flex-direction:column;align-items:center;gap:20px;padding:8px 0}
-.donut-svg{flex-shrink:0;cursor:pointer;overflow:visible}
+.donut-wrap{display:flex;flex-direction:column;align-items:center;gap:20px;padding:8px 0;position:relative}
+.donut-wrap::before{content:'';position:absolute;top:50%;left:50%;width:220px;height:220px;transform:translate(-50%,-50%);background:radial-gradient(circle,rgba(255,255,255,.05),transparent 70%);pointer-events:none;z-index:0}
+.donut-svg{flex-shrink:0;cursor:pointer;overflow:visible;position:relative;z-index:1}
 .donut-center{text-anchor:middle;dominant-baseline:middle}
 .donut-total{font-size:16px;font-weight:700;fill:var(--text)}
 .donut-label{font-size:11px;fill:var(--text2)}
-.donut-legend{width:100%;display:grid;grid-template-columns:1fr 1fr;gap:8px 16px}
-.donut-legend-item{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2);cursor:pointer;border-radius:6px;padding:5px 8px;transition:background .15s;min-width:0}
+.donut-legend{width:100%;display:flex;flex-direction:column;gap:4px;position:relative;z-index:1}
+.donut-legend-item{cursor:pointer;border-radius:10px;padding:7px 10px;transition:background .15s,opacity .2s;min-width:0}
 .donut-legend-item:hover{background:var(--surface2)}
-.donut-legend-item.active{color:var(--text);background:var(--surface2)}
-.legend-swatch{width:10px;height:10px;border-radius:3px;flex-shrink:0}
-.legend-val{margin-left:auto;font-weight:600;color:var(--text);font-size:12px;flex-shrink:0}
+.donut-legend-item.active{background:var(--surface2)}
+.donut-legend-top{display:flex;align-items:center;gap:7px;margin-bottom:6px}
+.legend-swatch{width:9px;height:9px;border-radius:3px;flex-shrink:0}
+.legend-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;font-size:12.5px;color:var(--text2)}
+.legend-pct{font-size:10px;color:var(--text3);flex-shrink:0;min-width:28px;text-align:right}
+.legend-val{font-weight:700;color:var(--text);font-size:12.5px;flex-shrink:0;min-width:56px;text-align:right}
+.donut-legend-bar{height:5px;border-radius:99px;background:var(--surface2);overflow:hidden}
+.donut-legend-fill{height:100%;border-radius:99px;transition:width .7s cubic-bezier(.16,1,.3,1)}
 
 /* PAY SCHEDULE */
 .pay-banner{background:var(--purple-bg);border:1px solid #2d1f5e;border-radius:var(--radius-sm);padding:12px 14px;margin:0 16px 12px;display:flex;align-items:center;gap:10px}
@@ -158,8 +164,8 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   #app-shell{max-width:840px;margin:0 auto;min-height:100vh;background:var(--bg);box-shadow:0 0 0 1px var(--border),0 40px 100px rgba(0,0,0,.65);position:relative}
   .modal{max-width:840px;margin:0 auto}
   .donut-wrap{flex-direction:row;justify-content:center;gap:36px}
-  .donut-svg{width:190px;height:190px}
-  .donut-legend{grid-template-columns:1fr;max-width:260px;align-self:center}
+  .donut-svg{width:200px;height:200px}
+  .donut-legend{max-width:280px;align-self:center}
 }
 
 /* ENTER-KEY / SAVE FEEDBACK */
@@ -297,11 +303,11 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   <div class="card" id="overview-donut-card" style="display:none">
     <div class="card-title">Where your money goes</div>
     <div class="donut-wrap">
-      <svg class="donut-svg" width="160" height="160" viewBox="0 0 160 160" id="overview-donut-svg">
+      <svg class="donut-svg" width="176" height="176" viewBox="0 0 170 170" id="overview-donut-svg">
         <circle cx="80" cy="80" r="65" fill="none" stroke="var(--surface2)" stroke-width="20"/>
         <g id="overview-donut-segs"></g>
-        <text x="80" y="74" class="donut-total" id="overview-donut-center-val">$0</text>
-        <text x="80" y="92" class="donut-label" id="overview-donut-center-lbl">income</text>
+        <text x="85" y="80" class="donut-total" id="overview-donut-center-val">$0</text>
+        <text x="85" y="97" class="donut-label" id="overview-donut-center-lbl">income</text>
       </svg>
       <div class="donut-legend" id="overview-donut-legend"></div>
     </div>
@@ -351,11 +357,11 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   <div class="card">
     <div class="card-title">Bills breakdown</div>
     <div class="donut-wrap">
-      <svg class="donut-svg" width="160" height="160" viewBox="0 0 160 160" id="bills-donut-svg">
+      <svg class="donut-svg" width="176" height="176" viewBox="0 0 170 170" id="bills-donut-svg">
         <circle cx="80" cy="80" r="65" fill="none" stroke="var(--surface2)" stroke-width="20"/>
         <g id="bills-donut-segs"></g>
-        <text x="80" y="74" class="donut-total" id="bills-donut-center-val">$0</text>
-        <text x="80" y="92" class="donut-label" id="bills-donut-center-lbl">total</text>
+        <text x="85" y="80" class="donut-total" id="bills-donut-center-val">$0</text>
+        <text x="85" y="97" class="donut-label" id="bills-donut-center-lbl">total</text>
       </svg>
       <div class="donut-legend" id="bills-donut-legend"></div>
     </div>
@@ -379,11 +385,11 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   <div class="card" id="spending-donut-card">
     <div class="card-title">Spending by category</div>
     <div class="donut-wrap">
-      <svg class="donut-svg" width="160" height="160" viewBox="0 0 160 160" id="spending-donut-svg">
+      <svg class="donut-svg" width="176" height="176" viewBox="0 0 170 170" id="spending-donut-svg">
         <circle cx="80" cy="80" r="65" fill="none" stroke="var(--surface2)" stroke-width="20"/>
         <g id="spending-donut-segs"></g>
-        <text x="80" y="74" class="donut-total" id="spending-donut-center-val">$0</text>
-        <text x="80" y="92" class="donut-label" id="spending-donut-center-lbl">this week</text>
+        <text x="85" y="80" class="donut-total" id="spending-donut-center-val">$0</text>
+        <text x="85" y="97" class="donut-label" id="spending-donut-center-lbl">this week</text>
       </svg>
       <div class="donut-legend" id="spending-donut-legend"></div>
     </div>
@@ -457,7 +463,7 @@ const CATS = [
 
 const BILLS = [
   {id:'old-car',   name:'Old car loan',      amount:150,    day:30,   note:'30th each month',                       freq:'monthly', rachel:false},
-  {id:'new-car',   name:'New car loan',      amount:335.76, day:9,    note:'9th each month',                        freq:'monthly', rachel:false},
+  {id:'new-car',   name:'New car loan',      amount:335.76, day:9,    note:'9th each month',                        freq:'monthly', rachel:false, start:'2026-08-09'},
   {id:'insurance', name:'Car insurance',     amount:232.05, day:17,   note:'17th each month',                       freq:'monthly', rachel:false},
   {id:'medify',    name:'Medify',            amount:58.89,  day:20,   note:'20th — cancel after September',         freq:'monthly', rachel:false},
   {id:'phone',     name:'Phone (Tangerine)', amount:15.15,  day:19,   note:'19th each month',                       freq:'monthly', rachel:false},
@@ -465,7 +471,15 @@ const BILLS = [
   {id:'spotify',   name:'Spotify',           amount:8,      day:30,   note:'30th each month',                       freq:'monthly', rachel:false},
 ];
 
-const WEEKLY_FIXED = BILLS.reduce((s,b) => s + b.amount, 0) / 4;
+// Bills can have a future `start` date (e.g. a loan that hasn't kicked in yet) — these
+// helpers make sure totals/donuts/weekly-set-aside only count bills that are actually active.
+function isBillActive(bill,ref){
+  ref=ref||new Date();
+  if(!bill.start)return true;
+  return ref>=new Date(bill.start+'T00:00:00');
+}
+function activeBills(ref){return BILLS.filter(b=>isBillActive(b,ref))}
+function weeklyFixed(ref){return activeBills(ref).reduce((s,b)=>s+b.amount,0)/4}
 const FREE_BUDGET = 60;
 const INVEST_TARGET = 600;
 
@@ -601,7 +615,9 @@ async function checkMonthRollover(){
       const prevPaid={};
       (prevBillRows||[]).forEach(r=>{prevPaid[r.bill_id]=r.paid});
       const prevExps=state.expenses.filter(e=>e.date&&e.date.startsWith(lastMonth));
-      const archive={month:lastMonth,bills:JSON.stringify(BILLS.map(b=>({...b,paid:!!prevPaid[b.id]}))),expenses_json:JSON.stringify(prevExps),total_expenses:prevExps.reduce((s,e)=>s+(e.amount||0),0),total_bills:BILLS.reduce((s,b)=>s+b.amount,0)};
+      const priorMonthRef=new Date(lastMonth+'-01T00:00:00');
+      const priorBills=activeBills(priorMonthRef);
+      const archive={month:lastMonth,bills:JSON.stringify(priorBills.map(b=>({...b,paid:!!prevPaid[b.id]}))),expenses_json:JSON.stringify(prevExps),total_expenses:prevExps.reduce((s,e)=>s+(e.amount||0),0),total_bills:priorBills.reduce((s,b)=>s+b.amount,0)};
       await fetch(SUPABASE_URL+'/rest/v1/budget_history',{method:'POST',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':'resolution=ignore-duplicates'},body:JSON.stringify(archive)});
       await dbUpsert('budget_state',{id:'main',income:0,fuel:0,invest_total:state.invest_total,invest_hits:state.invest_hits,updated_at:new Date().toISOString()});
       state.income=0;state.fuel=0;
@@ -628,6 +644,7 @@ function showPage(id){
   if(id==='bills')renderBills();
   if(id==='log')renderLog();
   if(id==='history')renderHistory();
+  if(id==='fuel')refreshFuelTipIfStale();
 }
 
 // ─── DONUT CHART ─────────────────────────────────────────────────────────────
@@ -643,13 +660,28 @@ function drawDonut(svgId,legendId,centerValId,centerLblId,segments,centerLabel){
   const total=segments.reduce((s,seg)=>s+seg.value,0);
   const cv=document.getElementById(centerValId);
   const cl=document.getElementById(centerLblId);
-  if(total===0){if(cv)cv.textContent='$0';if(cl)cl.textContent=centerLabel;return;}
+  if(total===0){if(cv){cv.style.fontSize='';cv.textContent='$0';}if(cl){cl.style.fontSize='';cl.textContent=centerLabel;}return;}
 
-  const cx=80,cy=80,r=65,strokeW=20;
+  const cx=85,cy=85,r=70,strokeW=23;
   const circ=2*Math.PI*r;
-  const gapDeg=2;
+  const gapDeg=2.5;
   const gapRad=gapDeg*Math.PI/180;
   let startAngle=-Math.PI/2;
+  const holeSpan=(r-strokeW/2)*2*0.86; // usable width inside the ring hole, with a safety margin
+
+  // Shrinks (and truncates as a last resort) text so it can never spill past the donut hole —
+  // measured against the actual rendered glyph width rather than guessing from character count.
+  function autoFit(el,text,maxSize,minSize){
+    if(!el)return;
+    el.style.fontSize=maxSize+'px';
+    el.textContent=text;
+    let size=maxSize;
+    while(el.getBBox().width>holeSpan&&size>minSize){size-=1;el.style.fontSize=size+'px';}
+    if(el.getBBox().width>holeSpan){
+      let t=text;
+      while(t.length>2&&el.getBBox().width>holeSpan){t=t.slice(0,-1);el.textContent=t.trimEnd()+'…';}
+    }
+  }
 
   // Animate center counting up
   function countUp(el,to,dur){
@@ -657,34 +689,21 @@ function drawDonut(svgId,legendId,centerValId,centerLblId,segments,centerLabel){
     function tick(now){
       const p=Math.min((now-start)/dur,1);
       const ease=p<1?1-Math.pow(1-p,3):1;
-      el.textContent='$'+(to*ease).toFixed(0);
+      autoFit(el,'$'+(to*ease).toFixed(0),16,10);
       if(p<1)requestAnimationFrame(tick);
-      else el.textContent=fmt(to);
+      else autoFit(el,fmt(to),16,10);
     }
     requestAnimationFrame(tick);
   }
 
-  function fitLabel(el,text){
-    // Shrink or truncate long segment names so they never spill past the donut hole
-    el.textContent=text;
-    el.style.fontSize='';
-    if(text.length>14){
-      el.style.fontSize='9px';
-      if(text.length>22)el.textContent=text.slice(0,20).trimEnd()+'…';
-    }
-  }
   function setCenter(idx){
     if(!cv||!cl)return;
-    if(idx===-1){cv.style.fontSize='';cv.textContent=fmt(total);fitLabel(cl,centerLabel);}
-    else{
-      const val=fmt(segments[idx].value);
-      cv.style.fontSize=val.length>8?'13px':'';
-      cv.textContent=val;
-      fitLabel(cl,segments[idx].label);
-    }
+    if(idx===-1){autoFit(cv,fmt(total),16,10);autoFit(cl,centerLabel,11,8);}
+    else{autoFit(cv,fmt(segments[idx].value),16,10);autoFit(cl,segments[idx].label,11,8);}
   }
 
   const circles=[];
+  let activeIndex=-1;
   segments.forEach((seg,i)=>{
     const pct=seg.value/total;
     const sweepAngle=Math.max(0,pct*2*Math.PI-gapRad);
@@ -698,12 +717,12 @@ function drawDonut(svgId,legendId,centerValId,centerLblId,segments,centerLabel){
     circle.setAttribute('fill','none');
     circle.setAttribute('stroke',seg.color);
     circle.setAttribute('stroke-width',strokeW);
-    circle.setAttribute('stroke-linecap','butt');
+    circle.setAttribute('stroke-linecap','round');
     circle.setAttribute('transform',`rotate(${rotDeg},${cx},${cy})`);
-    // Start fully drawn but invisible, fade in
     circle.setAttribute('stroke-dasharray',`${dashLen} ${circ-dashLen}`);
     circle.setAttribute('stroke-dashoffset',`${circ/4}`);
     circle.style.opacity='0';
+    circle.style.filter=`drop-shadow(0 0 3px ${seg.color}66)`;
     circle.style.transition=`opacity 0.4s ease ${i*60}ms, stroke-width 0.15s ease, filter 0.15s ease`;
     circle.style.cursor='pointer';
     segsGroup.appendChild(circle);
@@ -714,14 +733,15 @@ function drawDonut(svgId,legendId,centerValId,centerLblId,segments,centerLabel){
     requestAnimationFrame(()=>requestAnimationFrame(()=>{circle.style.opacity='1';}));
 
     const activate=(on)=>{
+      activeIndex=on?i:-1;
       circles.forEach(({circle:c,seg:s},j)=>{
         if(on){
-          c.setAttribute('stroke-width',j===i?strokeW+6:strokeW-2);
-          c.style.filter=j===i?`drop-shadow(0 0 8px ${s.color})`:'none';
-          c.style.opacity=j===i?'1':'0.3';
+          c.setAttribute('stroke-width',j===i?strokeW+6:strokeW-3);
+          c.style.filter=j===i?`drop-shadow(0 0 10px ${s.color})`:`drop-shadow(0 0 3px ${s.color}33)`;
+          c.style.opacity=j===i?'1':'0.35';
         } else {
           c.setAttribute('stroke-width',strokeW);
-          c.style.filter='none';
+          c.style.filter=`drop-shadow(0 0 3px ${s.color}66)`;
           c.style.opacity='1';
         }
       });
@@ -733,26 +753,39 @@ function drawDonut(svgId,legendId,centerValId,centerLblId,segments,centerLabel){
         });
       }
     };
+    const toggle=()=>activate(activeIndex!==i);
 
     circle.addEventListener('mouseenter',()=>activate(true));
     circle.addEventListener('mouseleave',()=>activate(false));
-    circle.addEventListener('click',()=>activate(true));
+    circle.addEventListener('click',toggle);
 
     if(legend){
       const item=document.createElement('div');
       item.className='donut-legend-item';
-      item.style.transition='opacity .2s';
-      item.innerHTML=`<div class="legend-swatch" style="background:${seg.color}"></div><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${seg.label}</span><span class="legend-val">${fmt(seg.value)}</span>`;
+      const pctLabel=Math.round(pct*100);
+      item.innerHTML=`
+        <div class="donut-legend-top">
+          <div class="legend-swatch" style="background:${seg.color};box-shadow:0 0 6px ${seg.color}88"></div>
+          <span class="legend-name">${seg.label}</span>
+          <span class="legend-pct">${pctLabel}%</span>
+          <span class="legend-val">${fmt(seg.value)}</span>
+        </div>
+        <div class="donut-legend-bar"><div class="donut-legend-fill" style="width:0%;background:${seg.color}"></div></div>`;
       item.addEventListener('mouseenter',()=>activate(true));
       item.addEventListener('mouseleave',()=>activate(false));
+      item.addEventListener('click',toggle);
       legend.appendChild(item);
+      requestAnimationFrame(()=>requestAnimationFrame(()=>{
+        item.querySelector('.donut-legend-fill').style.width=Math.max(3,pct*100)+'%';
+      }));
     }
   });
 
   // Count up center value
   if(cv)countUp(cv,total,700);
-  if(cl)cl.textContent=centerLabel;
+  if(cl)autoFit(cl,centerLabel,11,8);
 }
+
 
 // ─── OVERVIEW ────────────────────────────────────────────────────────────────
 function renderOverview(){
@@ -798,7 +831,7 @@ function updateMetrics(){
   const income=parseFloat(document.getElementById('income-input')?.value)||state.income;
   const fuel=parseFloat(document.getElementById('fuel-input')?.value)||state.fuel;
   const tithe=income*0.1;
-  const bills=WEEKLY_FIXED+fuel;
+  const bills=weeklyFixed()+fuel;
   const savings=income-tithe-bills-FREE_BUDGET;
   const weekExps=getWeekExpenses();
   const weekSpent=weekExps.filter(e=>e.cat!=='investing').reduce((s,e)=>s+(e.amount||0),0);
@@ -934,14 +967,17 @@ function renderBills(){
   const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
   document.getElementById('bills-month-label').textContent=MONTHS[now.getMonth()]+' '+now.getFullYear();
   document.getElementById('rachel-banner').style.display=now.getDate()===26?'':'none';
-  const total=BILLS.reduce((s,b)=>s+b.amount,0);
+
+  const active=activeBills(now);
+  const pending=BILLS.filter(b=>!isBillActive(b,now));
+  const total=active.reduce((s,b)=>s+b.amount,0);
   document.getElementById('bills-total-month').textContent=fmt(total);
   document.getElementById('bills-weekly-share').textContent=fmt(total/4);
 
-  // Bills donut
-  const billColors=['#f87171','#fb7185','#fb923c','#fbbf24','#60a5fa','#a78bfa','#f472b6'];
+  // Bills donut — only counts bills that have actually started
+  const billColors=['#f87171','#fb7185','#fb923c','#fbbf24','#60a5fa','#a78bfa','#f472b6','#34d399','#38bdf8'];
   drawDonut('bills-donut-svg','bills-donut-legend','bills-donut-center-val','bills-donut-center-lbl',
-    BILLS.map((b,i)=>({label:b.name,value:b.amount,color:billColors[i%billColors.length]})),'total');
+    active.map((b,i)=>({label:b.name,value:b.amount,color:billColors[i%billColors.length]})),'total');
 
   function daysUntil(day){
     if(!day)return null;
@@ -950,8 +986,13 @@ function renderBills(){
     if(d<today)d.setMonth(d.getMonth()+1);
     return Math.round((d-today)/86400000);
   }
+  function fmtDate(dateStr){
+    const d=new Date(dateStr+'T00:00:00');
+    const M=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return d.getDate()+' '+M[d.getMonth()];
+  }
   const container=document.getElementById('bill-list-container');
-  container.innerHTML='<div class="bill-list">'+BILLS.map(b=>{
+  const activeHTML=active.map(b=>{
     const isPaid=!!state.bills_paid[b.id];
     const days=daysUntil(b.day);
     const dueSoon=!isPaid&&days!==null&&days<=5;
@@ -961,9 +1002,16 @@ function renderBills(){
       <div class="bill-info"><div class="bill-name">${b.name}</div><div class="bill-sub">${b.note}</div></div>
       <div class="bill-right"><div class="bill-amount">${fmt(b.amount)}</div>${badge}</div>
     </div>`;
-  }).join('')+'</div>';
+  }).join('');
+  const pendingHTML=pending.length?`<div class="section-label" style="margin-top:20px">Not counted yet</div><div class="bill-list">`+pending.map(b=>`
+    <div class="bill-card future" style="opacity:.55;cursor:default" title="Kicks in ${fmtDate(b.start)} — not included in this month's total yet">
+      <div class="bill-check" style="visibility:hidden"></div>
+      <div class="bill-info"><div class="bill-name">${b.name}</div><div class="bill-sub">${b.note}</div></div>
+      <div class="bill-right"><div class="bill-amount">${fmt(b.amount)}</div><span class="bill-badge badge-upcoming">from ${fmtDate(b.start)}</span></div>
+    </div>`).join('')+'</div>':'';
+  container.innerHTML='<div class="bill-list">'+activeHTML+'</div>'+pendingHTML;
 
-  const upcoming=BILLS.map(b=>({...b,days:daysUntil(b.day)})).filter(b=>b.days!==null&&b.days<=10&&b.days>=0&&!state.bills_paid[b.id]).sort((a,b)=>a.days-b.days);
+  const upcoming=active.map(b=>({...b,days:daysUntil(b.day)})).filter(b=>b.days!==null&&b.days<=10&&b.days>=0&&!state.bills_paid[b.id]).sort((a,b)=>a.days-b.days);
   const upEl=document.getElementById('upcoming-text');
   upEl.innerHTML=upcoming.length?upcoming.map(b=>`<span style="color:var(--text)">${b.name}</span> — ${fmt(b.amount)} ${b.days===0?'<span style="color:var(--red)">due today</span>':`in <strong>${b.days}d</strong>`}${b.rachel?' <span style="color:var(--amber)">(get $40 from Rachel first)</span>':''}`).join('<br>'):'No bills due in the next 10 days.';
 }
@@ -1051,12 +1099,29 @@ function renderLog(){
 }
 
 // ─── FUEL PRICES ─────────────────────────────────────────────────────────────
+let fuelLastCheapestCents=null;
+let fuelTipRenderedDay=null;
+
+// Re-renders just the day-dependent tip text (no API call) whenever the fuel tab is opened,
+// so the advice always matches *today* even if prices were last fetched a while ago.
+function refreshFuelTipIfStale(){
+  const today=new Date().getDay();
+  if(fuelTipRenderedDay===null||fuelTipRenderedDay!==today){
+    renderFuelTip(fuelLastCheapestCents);
+  }
+}
+// Belt-and-braces: if the app is left open across midnight, catch the day change every 30 min.
+setInterval(()=>{
+  if(document.getElementById('page-fuel')?.classList.contains('active'))refreshFuelTipIfStale();
+},30*60*1000);
+
 // Dynamic, timely "when to fill up" tip. Grounded in ACCC's petrol price cycle
 // guidance rather than a fixed hardcoded day — Brisbane's cycle drifts, so this
 // gives a directional steer for *today* and always defers to the live board above.
 function renderFuelTip(cheapestCents){
   const now=new Date();
   const day=now.getDay(); // 0 Sun..6 Sat
+  fuelTipRenderedDay=day;
   const hour=now.getHours();
   let headline, body;
   if(day>=1&&day<=3){ // Mon-Wed
@@ -1069,12 +1134,14 @@ function renderFuelTip(cheapestCents){
     headline='Weekend — mixed bag';
     body="Weekend prices sit wherever the current cycle happens to be. If you can wait, Monday–Wednesday has historically been the stronger bet in Brisbane. If you need fuel today, the board above is your best guide.";
   }
+  const dayName=now.toLocaleDateString('en-AU',{weekday:'long'});
+  const dateName=now.toLocaleDateString('en-AU',{day:'numeric',month:'short'});
   const fillLine=cheapestCents?`At today's cheapest live price (${(cheapestCents/10).toFixed(1)}c/L), a 51L tank runs about $${((cheapestCents/1000)*51).toFixed(2)}.`:'';
   document.getElementById('fuel-tip-container').innerHTML=`
     <div class="fuel-tip-card">
-      <div class="fuel-tip-head">💡 ${headline}</div>
+      <div class="fuel-tip-head">💡 ${dayName} — ${headline}</div>
       <div class="fuel-tip-body">${body} ${fillLine}</div>
-      <div class="fuel-tip-src">Based on ACCC petrol price cycle guidance for Brisbane — cycles vary in length and this is a guide only, not a guarantee. accc.gov.au</div>
+      <div class="fuel-tip-src">Re-checked for ${dayName} ${dateName} · based on ACCC petrol price cycle guidance for Brisbane — cycles vary in length, so treat this as a guide, not a guarantee. accc.gov.au</div>
     </div>`;
 }
 
@@ -1112,6 +1179,7 @@ async function loadFuelPrices(){
       .sort((a,b)=>a.priceCents-b.priceCents).slice(0,5);
     if(!results.length){el.innerHTML='<div class="empty"><div class="empty-icon">⛽</div>No prices found</div>';renderFuelTip(null);return}
     updEl.textContent='Updated '+new Date().toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'});
+    fuelLastCheapestCents=results[0].priceCents;
     renderFuelTip(results[0].priceCents);
 
     const cheapest=results[0];
