@@ -85,13 +85,18 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 .setup-logo{font-size:40px;margin-bottom:16px}
 .setup-divider{width:100%;max-width:400px;border:none;border-top:1px solid var(--border);margin:20px 0}
 
-/* DONUT CHART */
-.donut-wrap{display:flex;flex-direction:column;align-items:center;gap:20px;padding:8px 0;position:relative}
-.donut-wrap::before{content:'';position:absolute;top:50%;left:50%;width:220px;height:220px;transform:translate(-50%,-50%);background:radial-gradient(circle,rgba(255,255,255,.05),transparent 70%);pointer-events:none;z-index:0}
-.donut-svg{flex-shrink:0;cursor:pointer;overflow:visible;position:relative;z-index:1}
-.donut-center{text-anchor:middle;dominant-baseline:middle}
-.donut-total{font-size:16px;font-weight:700;fill:var(--text)}
-.donut-label{font-size:11px;fill:var(--text2)}
+/* BREAKDOWN RIBBON — replaces the old donut. The total lives above the bar as
+   plain text (not squeezed inside a ring), so nothing can ever visually clip. */
+.donut-wrap{display:flex;flex-direction:column;gap:14px;padding:4px 0 8px;position:relative}
+.ring-total{text-align:center}
+.ring-total-val{display:block;font-size:30px;font-weight:800;letter-spacing:-1px;color:var(--text)}
+.ring-total-lbl{display:block;font-size:11.5px;color:var(--text2);margin-top:2px;text-transform:uppercase;letter-spacing:.07em}
+.ribbon-track{display:flex;height:20px;border-radius:99px;overflow:hidden;background:var(--surface2);box-shadow:inset 0 0 0 1px var(--border);position:relative}
+.ribbon-seg{height:100%;width:0%;position:relative;cursor:pointer;transition:width .8s cubic-bezier(.16,1,.3,1),filter .2s ease,transform .2s ease;transform-origin:center}
+.ribbon-seg:not(:last-child){box-shadow:2px 0 0 var(--bg)}
+.ribbon-seg::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.28),rgba(255,255,255,0) 55%)}
+.ribbon-seg.dim{filter:brightness(.4) saturate(.7)}
+.ribbon-seg.active{filter:brightness(1.3);transform:scaleY(1.25)}
 .donut-legend{width:100%;display:flex;flex-direction:column;gap:4px;position:relative;z-index:1}
 .donut-legend-item{cursor:pointer;border-radius:10px;padding:7px 10px;transition:background .15s,opacity .2s;min-width:0}
 .donut-legend-item:hover{background:var(--surface2)}
@@ -103,6 +108,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 .legend-val{font-weight:700;color:var(--text);font-size:12.5px;flex-shrink:0;min-width:56px;text-align:right}
 .donut-legend-bar{height:5px;border-radius:99px;background:var(--surface2);overflow:hidden}
 .donut-legend-fill{height:100%;border-radius:99px;transition:width .7s cubic-bezier(.16,1,.3,1)}
+
 
 /* PAY SCHEDULE */
 .pay-banner{background:var(--purple-bg);border:1px solid #2d1f5e;border-radius:var(--radius-sm);padding:12px 14px;margin:0 16px 12px;display:flex;align-items:center;gap:10px}
@@ -162,11 +168,21 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 @media(min-width:700px){
   body{background:#000}
   #app-shell{max-width:840px;margin:0 auto;min-height:100vh;background:var(--bg);box-shadow:0 0 0 1px var(--border),0 40px 100px rgba(0,0,0,.65);position:relative}
-  .modal{max-width:840px;margin:0 auto}
-  .donut-wrap{flex-direction:row;justify-content:center;gap:36px}
-  .donut-svg{width:200px;height:200px}
-  .donut-legend{max-width:280px;align-self:center}
+  .modal{max-width:640px;margin:0 auto}
+  .ribbon-track{height:22px}
+  .ring-total-val{font-size:34px}
 }
+
+/* True desktop: a left-hand sidebar nav instead of a stretched top bar, and a
+   readable centered content column instead of edge-to-edge cards. */
+@media(min-width:960px){
+  #app-shell{max-width:1080px;display:grid;grid-template-columns:220px 1fr;box-shadow:0 0 0 1px var(--border),0 50px 120px rgba(0,0,0,.7)}
+  nav{grid-column:1;position:sticky;top:0;left:auto;right:auto;bottom:auto;height:100vh;width:220px;flex-direction:column;align-items:stretch;justify-content:flex-start;border-bottom:none;border-right:1px solid var(--border);padding:28px 0;gap:2px}
+  nav button{flex-direction:row;justify-content:flex-start;gap:11px;padding:12px 24px;font-size:13.5px;border-radius:0 999px 999px 0;margin-right:14px}
+  nav button.active{background:var(--green-bg)}
+  main{grid-column:2;max-width:700px;margin:0 auto;width:100%}
+}
+
 
 /* ENTER-KEY / SAVE FEEDBACK */
 .save-flash{outline:2px solid var(--green)!important;transition:outline-color .6s ease}
@@ -299,16 +315,15 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     <div class="hint-row">Tip: press Enter in either field to save instantly.</div>
   </div>
 
-  <!-- OVERVIEW DONUT -->
+  <!-- OVERVIEW BREAKDOWN -->
   <div class="card" id="overview-donut-card" style="display:none">
     <div class="card-title">Where your money goes</div>
     <div class="donut-wrap">
-      <svg class="donut-svg" width="176" height="176" viewBox="0 0 170 170" id="overview-donut-svg">
-        <circle cx="80" cy="80" r="65" fill="none" stroke="var(--surface2)" stroke-width="20"/>
-        <g id="overview-donut-segs"></g>
-        <text x="85" y="80" class="donut-total" id="overview-donut-center-val">$0</text>
-        <text x="85" y="97" class="donut-label" id="overview-donut-center-lbl">income</text>
-      </svg>
+      <div class="ring-total">
+        <span class="ring-total-val" id="overview-donut-center-val">$0</span>
+        <span class="ring-total-lbl" id="overview-donut-center-lbl">income</span>
+      </div>
+      <div class="ribbon-track" id="overview-donut-svg"></div>
       <div class="donut-legend" id="overview-donut-legend"></div>
     </div>
   </div>
@@ -353,16 +368,15 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     <div class="metric"><div class="metric-label">Weekly set-aside</div><div class="metric-value" id="bills-weekly-share" style="color:var(--red)">$—</div></div>
   </div>
 
-  <!-- BILLS DONUT -->
+  <!-- BILLS BREAKDOWN -->
   <div class="card">
     <div class="card-title">Bills breakdown</div>
     <div class="donut-wrap">
-      <svg class="donut-svg" width="176" height="176" viewBox="0 0 170 170" id="bills-donut-svg">
-        <circle cx="80" cy="80" r="65" fill="none" stroke="var(--surface2)" stroke-width="20"/>
-        <g id="bills-donut-segs"></g>
-        <text x="85" y="80" class="donut-total" id="bills-donut-center-val">$0</text>
-        <text x="85" y="97" class="donut-label" id="bills-donut-center-lbl">total</text>
-      </svg>
+      <div class="ring-total">
+        <span class="ring-total-val" id="bills-donut-center-val">$0</span>
+        <span class="ring-total-lbl" id="bills-donut-center-lbl">total</span>
+      </div>
+      <div class="ribbon-track" id="bills-donut-svg"></div>
       <div class="donut-legend" id="bills-donut-legend"></div>
     </div>
   </div>
@@ -381,16 +395,15 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     <div class="metric"><div class="metric-label">Remaining ($60)</div><div class="metric-value" id="log-week-remaining" style="color:var(--green)">$60</div></div>
   </div>
 
-  <!-- SPENDING DONUT -->
+  <!-- SPENDING BREAKDOWN -->
   <div class="card" id="spending-donut-card">
     <div class="card-title">Spending by category</div>
     <div class="donut-wrap">
-      <svg class="donut-svg" width="176" height="176" viewBox="0 0 170 170" id="spending-donut-svg">
-        <circle cx="80" cy="80" r="65" fill="none" stroke="var(--surface2)" stroke-width="20"/>
-        <g id="spending-donut-segs"></g>
-        <text x="85" y="80" class="donut-total" id="spending-donut-center-val">$0</text>
-        <text x="85" y="97" class="donut-label" id="spending-donut-center-lbl">this week</text>
-      </svg>
+      <div class="ring-total">
+        <span class="ring-total-val" id="spending-donut-center-val">$0</span>
+        <span class="ring-total-lbl" id="spending-donut-center-lbl">this week</span>
+      </div>
+      <div class="ribbon-track" id="spending-donut-svg"></div>
       <div class="donut-legend" id="spending-donut-legend"></div>
     </div>
   </div>
@@ -501,7 +514,12 @@ async function sbFetch(method, path, body){
   });
   if(!res.ok&&res.status!==204){const e=await res.text();throw new Error(e)}
   if(method==='DELETE'||res.status===204)return null;
-  return res.json();
+  const json=await res.json();
+  // Supabase/PostgREST returns an ARRAY of rows on insert (return=representation),
+  // but every caller here expects a single row object back from a POST — unwrap it so
+  // nothing downstream silently treats the whole array as "the expense" (the $NaN bug).
+  // GET requests still return their full array untouched.
+  return (method==='POST'&&Array.isArray(json))?json[0]:json;
 }
 
 async function dbUpsert(table,data){
@@ -647,122 +665,69 @@ function showPage(id){
   if(id==='fuel')refreshFuelTipIfStale();
 }
 
-// ─── DONUT CHART ─────────────────────────────────────────────────────────────
-function polarToXY(cx,cy,r,angle){return{x:cx+r*Math.cos(angle),y:cy+r*Math.sin(angle)}}
-
-function drawDonut(svgId,legendId,centerValId,centerLblId,segments,centerLabel){
-  const svg=document.getElementById(svgId);
-  const segsGroup=svg?svg.querySelector('g'):null;
-  if(!segsGroup)return;
-  segsGroup.innerHTML='';
+// ─── BREAKDOWN RIBBON (formerly a donut) ─────────────────────────────────────
+// The total lives as plain text ABOVE the bar now, never inside a constrained
+// shape — so long labels/values can never visually clip, on any screen size.
+function drawDonut(trackId,legendId,centerValId,centerLblId,segments,centerLabel){
+  const track=document.getElementById(trackId);
+  if(!track)return;
+  track.innerHTML='';
   const legend=document.getElementById(legendId);
   if(legend)legend.innerHTML='';
   const total=segments.reduce((s,seg)=>s+seg.value,0);
   const cv=document.getElementById(centerValId);
   const cl=document.getElementById(centerLblId);
-  if(total===0){if(cv){cv.style.fontSize='';cv.textContent='$0';}if(cl){cl.style.fontSize='';cl.textContent=centerLabel;}return;}
+  if(total===0){if(cv)cv.textContent='$0';if(cl)cl.textContent=centerLabel;return}
 
-  const cx=85,cy=85,r=70,strokeW=23;
-  const circ=2*Math.PI*r;
-  const gapDeg=2.5;
-  const gapRad=gapDeg*Math.PI/180;
-  let startAngle=-Math.PI/2;
-  const holeSpan=(r-strokeW/2)*2*0.86; // usable width inside the ring hole, with a safety margin
-
-  // Shrinks (and truncates as a last resort) text so it can never spill past the donut hole —
-  // measured against the actual rendered glyph width rather than guessing from character count.
-  function autoFit(el,text,maxSize,minSize){
-    if(!el)return;
-    el.style.fontSize=maxSize+'px';
-    el.textContent=text;
-    let size=maxSize;
-    while(el.getBBox().width>holeSpan&&size>minSize){size-=1;el.style.fontSize=size+'px';}
-    if(el.getBBox().width>holeSpan){
-      let t=text;
-      while(t.length>2&&el.getBBox().width>holeSpan){t=t.slice(0,-1);el.textContent=t.trimEnd()+'…';}
-    }
+  function setCenter(idx){
+    if(!cv||!cl)return;
+    if(idx===-1){cv.textContent=fmt(total);cl.textContent=centerLabel}
+    else{cv.textContent=fmt(segments[idx].value);cl.textContent=segments[idx].label+' · '+Math.round(segments[idx].value/total*100)+'%'}
   }
 
-  // Animate center counting up
-  function countUp(el,to,dur){
+  function countUp(to,dur){
     const start=performance.now();
     function tick(now){
       const p=Math.min((now-start)/dur,1);
       const ease=p<1?1-Math.pow(1-p,3):1;
-      autoFit(el,'$'+(to*ease).toFixed(0),16,10);
-      if(p<1)requestAnimationFrame(tick);
-      else autoFit(el,fmt(to),16,10);
+      if(cv)cv.textContent='$'+Math.round(to*ease).toLocaleString('en-AU');
+      if(p<1)requestAnimationFrame(tick); else if(cv)cv.textContent=fmt(to);
     }
     requestAnimationFrame(tick);
   }
 
-  function setCenter(idx){
-    if(!cv||!cl)return;
-    if(idx===-1){autoFit(cv,fmt(total),16,10);autoFit(cl,centerLabel,11,8);}
-    else{autoFit(cv,fmt(segments[idx].value),16,10);autoFit(cl,segments[idx].label,11,8);}
-  }
-
-  const circles=[];
+  const segEls=[];
   let activeIndex=-1;
   segments.forEach((seg,i)=>{
-    const pct=seg.value/total;
-    const sweepAngle=Math.max(0,pct*2*Math.PI-gapRad);
-    const dashLen=(sweepAngle/(2*Math.PI))*circ;
-    const rotDeg=(startAngle+Math.PI/2)*180/Math.PI;
-
-    const circle=document.createElementNS('http://www.w3.org/2000/svg','circle');
-    circle.setAttribute('cx',cx);
-    circle.setAttribute('cy',cy);
-    circle.setAttribute('r',r);
-    circle.setAttribute('fill','none');
-    circle.setAttribute('stroke',seg.color);
-    circle.setAttribute('stroke-width',strokeW);
-    circle.setAttribute('stroke-linecap','round');
-    circle.setAttribute('transform',`rotate(${rotDeg},${cx},${cy})`);
-    circle.setAttribute('stroke-dasharray',`${dashLen} ${circ-dashLen}`);
-    circle.setAttribute('stroke-dashoffset',`${circ/4}`);
-    circle.style.opacity='0';
-    circle.style.filter=`drop-shadow(0 0 3px ${seg.color}66)`;
-    circle.style.transition=`opacity 0.4s ease ${i*60}ms, stroke-width 0.15s ease, filter 0.15s ease`;
-    circle.style.cursor='pointer';
-    segsGroup.appendChild(circle);
-    circles.push({circle,seg,dashLen});
-    startAngle+=pct*2*Math.PI;
-
-    // Trigger fade in
-    requestAnimationFrame(()=>requestAnimationFrame(()=>{circle.style.opacity='1';}));
+    const pct=seg.value/total*100;
+    const el=document.createElement('div');
+    el.className='ribbon-seg';
+    el.style.background=seg.color;
+    el.title=`${seg.label}: ${fmt(seg.value)}`;
+    track.appendChild(el);
+    segEls.push(el);
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{el.style.width=Math.max(pct,0.8)+'%'}));
 
     const activate=(on)=>{
       activeIndex=on?i:-1;
-      circles.forEach(({circle:c,seg:s},j)=>{
-        if(on){
-          c.setAttribute('stroke-width',j===i?strokeW+6:strokeW-3);
-          c.style.filter=j===i?`drop-shadow(0 0 10px ${s.color})`:`drop-shadow(0 0 3px ${s.color}33)`;
-          c.style.opacity=j===i?'1':'0.35';
-        } else {
-          c.setAttribute('stroke-width',strokeW);
-          c.style.filter=`drop-shadow(0 0 3px ${s.color}66)`;
-          c.style.opacity='1';
-        }
-      });
+      segEls.forEach((e,j)=>{e.classList.toggle('dim',on&&j!==i);e.classList.toggle('active',on&&j===i)});
       setCenter(on?i:-1);
       if(legend){
-        document.querySelectorAll(`#${legendId} .donut-legend-item`).forEach((el,j)=>{
-          el.style.opacity=on?(j===i?'1':'0.4'):'1';
-          el.classList.toggle('active',on&&j===i);
+        document.querySelectorAll(`#${legendId} .donut-legend-item`).forEach((lel,j)=>{
+          lel.style.opacity=on?(j===i?'1':'0.4'):'1';
+          lel.classList.toggle('active',on&&j===i);
         });
       }
     };
     const toggle=()=>activate(activeIndex!==i);
-
-    circle.addEventListener('mouseenter',()=>activate(true));
-    circle.addEventListener('mouseleave',()=>activate(false));
-    circle.addEventListener('click',toggle);
+    el.addEventListener('mouseenter',()=>activate(true));
+    el.addEventListener('mouseleave',()=>activate(false));
+    el.addEventListener('click',toggle);
 
     if(legend){
       const item=document.createElement('div');
       item.className='donut-legend-item';
-      const pctLabel=Math.round(pct*100);
+      const pctLabel=Math.round(pct);
       item.innerHTML=`
         <div class="donut-legend-top">
           <div class="legend-swatch" style="background:${seg.color};box-shadow:0 0 6px ${seg.color}88"></div>
@@ -776,14 +741,13 @@ function drawDonut(svgId,legendId,centerValId,centerLblId,segments,centerLabel){
       item.addEventListener('click',toggle);
       legend.appendChild(item);
       requestAnimationFrame(()=>requestAnimationFrame(()=>{
-        item.querySelector('.donut-legend-fill').style.width=Math.max(3,pct*100)+'%';
+        item.querySelector('.donut-legend-fill').style.width=Math.max(3,pct)+'%';
       }));
     }
   });
 
-  // Count up center value
-  if(cv)countUp(cv,total,700);
-  if(cl)autoFit(cl,centerLabel,11,8);
+  if(cl)cl.textContent=centerLabel;
+  countUp(total,700);
 }
 
 
@@ -832,9 +796,12 @@ function updateMetrics(){
   const fuel=parseFloat(document.getElementById('fuel-input')?.value)||state.fuel;
   const tithe=income*0.1;
   const bills=weeklyFixed()+fuel;
-  const savings=income-tithe-bills-FREE_BUDGET;
   const weekExps=getWeekExpenses();
   const weekSpent=weekExps.filter(e=>e.cat!=='investing').reduce((s,e)=>s+(e.amount||0),0);
+  const overBudget=Math.max(0,weekSpent-FREE_BUDGET);
+  // Savings now reflects what you *actually* spent, not a flat $60 assumption — so going
+  // over your free-spend budget genuinely eats into savings instead of vanishing silently.
+  const savings=income-tithe-bills-weekSpent;
 
   document.getElementById('m-income').textContent=income>0?fmt(income):'$—';
   document.getElementById('m-tithe').textContent=income>0?fmt(tithe):'$—';
@@ -848,11 +815,11 @@ function updateMetrics(){
   if(income>0){
     donutCard.style.display='';
     const investing=weekExps.filter(e=>e.cat==='investing').reduce((s,e)=>s+(e.amount||0),0);
-    const savingsVal=Math.max(0,savings)+investing;
     drawDonut('overview-donut-svg','overview-donut-legend','overview-donut-center-val','overview-donut-center-lbl',[
       {label:'Bills',value:bills,color:'#f87171'},
       {label:'Tithe',value:tithe,color:'#a78bfa'},
-      {label:'Free spend',value:Math.min(FREE_BUDGET,weekSpent||FREE_BUDGET),color:'#fbbf24'},
+      {label:'Free spend',value:Math.min(FREE_BUDGET,weekSpent),color:'#fbbf24'},
+      {label:'Over budget',value:overBudget,color:'#fb7185'},
       {label:'Investing',value:investing,color:'#34d399'},
       {label:'Savings',value:Math.max(0,savings-investing),color:'#4ade80'},
     ].filter(s=>s.value>0),'income');
@@ -864,7 +831,7 @@ function updateMetrics(){
   const sp=document.getElementById('spend-prog');
   if(sp){sp.style.width=pct+'%';sp.className='progress-fill'+(pct>=100?' red':pct>=75?' amber':'')}
   const spl=document.getElementById('spend-prog-label');
-  if(spl)spl.textContent=fmt(weekSpent)+' spent';
+  if(spl)spl.textContent=fmt(weekSpent)+' spent'+(overBudget>0?` (${fmt(overBudget)} over)`:'');
   const rem=FREE_BUDGET-weekSpent;
   const lwt=document.getElementById('log-week-total');
   const lwr=document.getElementById('log-week-remaining');
