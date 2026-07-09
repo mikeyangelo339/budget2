@@ -163,11 +163,8 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   main{padding-bottom:0}
 }
 
-/* FLUID SHELL — scales continuously with the window instead of snapping between
-   fixed "mobile" / "desktop" layouts, so it looks right whether you're on a phone,
-   a resized browser window, or a full laptop screen. Capped only enough that text
-   doesn't stretch into unreadable mega-wide lines on a huge external monitor. */
-#app-shell{max-width:min(1080px,94vw);margin:0 auto;min-height:100vh;position:relative}
+/* FULL-WIDTH SHELL — fills the whole window, nav bar included, on any size screen. */
+#app-shell{max-width:100%;margin:0;min-height:100vh;position:relative}
 .modal{max-width:min(520px,100vw);margin:0 auto}
 
 /* Cards that can naturally sit side-by-side reflow on their own as space allows —
