@@ -165,15 +165,15 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 
 /* FLUID SHELL — scales continuously with the window instead of snapping between
    fixed "mobile" / "desktop" layouts, so it looks right whether you're on a phone,
-   a resized browser window, or a full laptop screen. No sidebar, no dead space:
-   just a comfortably-capped reading width that shrinks and grows with the viewport. */
-#app-shell{max-width:min(760px,100vw);margin:0 auto;min-height:100vh;position:relative}
+   a resized browser window, or a full laptop screen. Capped only enough that text
+   doesn't stretch into unreadable mega-wide lines on a huge external monitor. */
+#app-shell{max-width:min(1080px,94vw);margin:0 auto;min-height:100vh;position:relative}
 .modal{max-width:min(520px,100vw);margin:0 auto}
 
 /* Cards that can naturally sit side-by-side reflow on their own as space allows —
    no breakpoint needed, they just wrap when the window gets narrow. */
 .card-pair{display:flex;gap:12px;flex-wrap:wrap;margin:0 16px 12px}
-.card-pair>.card,.card-pair>.invest-card{flex:1 1 300px;margin:0;min-width:0}
+.card-pair>.card,.card-pair>.invest-card{flex:1 1 320px;margin:0;min-width:0}
 
 /* ENTER-KEY / SAVE FEEDBACK */
 .save-flash{outline:2px solid var(--green)!important;transition:outline-color .6s ease}
