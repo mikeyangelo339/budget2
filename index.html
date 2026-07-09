@@ -91,12 +91,11 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 .ring-total{text-align:center}
 .ring-total-val{display:block;font-size:30px;font-weight:800;letter-spacing:-1px;color:var(--text)}
 .ring-total-lbl{display:block;font-size:11.5px;color:var(--text2);margin-top:2px;text-transform:uppercase;letter-spacing:.07em}
-.ribbon-track{display:flex;height:20px;border-radius:99px;overflow:hidden;background:var(--surface2);box-shadow:inset 0 0 0 1px var(--border);position:relative}
-.ribbon-seg{height:100%;width:0%;position:relative;cursor:pointer;transition:width .8s cubic-bezier(.16,1,.3,1),filter .2s ease,transform .2s ease;transform-origin:center}
+.ribbon-track{display:flex;height:14px;border-radius:99px;overflow:hidden;background:var(--surface2);position:relative}
+.ribbon-seg{height:100%;width:0%;position:relative;cursor:pointer;transition:width .8s cubic-bezier(.16,1,.3,1),opacity .2s ease,filter .2s ease}
 .ribbon-seg:not(:last-child){box-shadow:2px 0 0 var(--bg)}
-.ribbon-seg::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.28),rgba(255,255,255,0) 55%)}
-.ribbon-seg.dim{filter:brightness(.4) saturate(.7)}
-.ribbon-seg.active{filter:brightness(1.3);transform:scaleY(1.25)}
+.ribbon-seg.dim{opacity:.35}
+.ribbon-seg.active{filter:brightness(1.15)}
 .donut-legend{width:100%;display:flex;flex-direction:column;gap:4px;position:relative;z-index:1}
 .donut-legend-item{cursor:pointer;border-radius:10px;padding:7px 10px;transition:background .15s,opacity .2s;min-width:0}
 .donut-legend-item:hover{background:var(--surface2)}
@@ -164,25 +163,17 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   main{padding-bottom:0}
 }
 
-/* DESKTOP APP SHELL — keeps things from sprawling edge-to-edge on a laptop */
-@media(min-width:700px){
-  body{background:#000}
-  #app-shell{max-width:840px;margin:0 auto;min-height:100vh;background:var(--bg);box-shadow:0 0 0 1px var(--border),0 40px 100px rgba(0,0,0,.65);position:relative}
-  .modal{max-width:640px;margin:0 auto}
-  .ribbon-track{height:22px}
-  .ring-total-val{font-size:34px}
-}
+/* FLUID SHELL — scales continuously with the window instead of snapping between
+   fixed "mobile" / "desktop" layouts, so it looks right whether you're on a phone,
+   a resized browser window, or a full laptop screen. No sidebar, no dead space:
+   just a comfortably-capped reading width that shrinks and grows with the viewport. */
+#app-shell{max-width:min(760px,100vw);margin:0 auto;min-height:100vh;position:relative}
+.modal{max-width:min(520px,100vw);margin:0 auto}
 
-/* True desktop: a left-hand sidebar nav instead of a stretched top bar, and a
-   readable centered content column instead of edge-to-edge cards. */
-@media(min-width:960px){
-  #app-shell{max-width:1080px;display:grid;grid-template-columns:220px 1fr;box-shadow:0 0 0 1px var(--border),0 50px 120px rgba(0,0,0,.7)}
-  nav{grid-column:1;position:sticky;top:0;left:auto;right:auto;bottom:auto;height:100vh;width:220px;flex-direction:column;align-items:stretch;justify-content:flex-start;border-bottom:none;border-right:1px solid var(--border);padding:28px 0;gap:2px}
-  nav button{flex-direction:row;justify-content:flex-start;gap:11px;padding:12px 24px;font-size:13.5px;border-radius:0 999px 999px 0;margin-right:14px}
-  nav button.active{background:var(--green-bg)}
-  main{grid-column:2;max-width:700px;margin:0 auto;width:100%}
-}
-
+/* Cards that can naturally sit side-by-side reflow on their own as space allows —
+   no breakpoint needed, they just wrap when the window gets narrow. */
+.card-pair{display:flex;gap:12px;flex-wrap:wrap;margin:0 16px 12px}
+.card-pair>.card,.card-pair>.invest-card{flex:1 1 300px;margin:0;min-width:0}
 
 /* ENTER-KEY / SAVE FEEDBACK */
 .save-flash{outline:2px solid var(--green)!important;transition:outline-color .6s ease}
@@ -302,17 +293,33 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     <div class="metric"><div class="metric-label">Savings</div><div class="metric-value" id="m-save" style="color:var(--green)">$—</div></div>
   </div>
 
-  <div class="card">
-    <div class="card-title">This week's income</div>
-    <div class="input-row">
-      <div class="field" style="flex:2"><label>Amount earned ($)</label><input type="number" id="income-input" placeholder="e.g. 620" min="0" step="1" inputmode="decimal" oninput="handleIncomeInput()" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();saveIncomeState(true)}"></div>
-      <div class="field" style="flex:1"><label>Fuel (if filling up)</label><input type="number" id="fuel-input" placeholder="$0" min="0" step="0.01" inputmode="decimal" oninput="handleIncomeInput()" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();saveIncomeState(true)}"></div>
+  <div class="card-pair">
+    <div class="card">
+      <div class="card-title">This week's income</div>
+      <div class="input-row">
+        <div class="field" style="flex:2"><label>Amount earned ($)</label><input type="number" id="income-input" placeholder="e.g. 620" min="0" step="1" inputmode="decimal" oninput="handleIncomeInput()" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();saveIncomeState(true)}"></div>
+        <div class="field" style="flex:1"><label>Fuel (if filling up)</label><input type="number" id="fuel-input" placeholder="$0" min="0" step="0.01" inputmode="decimal" oninput="handleIncomeInput()" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();saveIncomeState(true)}"></div>
+      </div>
+      <div class="income-save-row">
+        <button class="btn btn-primary btn-sm" onclick="saveIncomeState(true)">Save income</button>
+        <span class="income-saved-tag" id="income-saved-tag">✓ Saved</span>
+      </div>
+      <div class="hint-row">Tip: press Enter in either field to save instantly.</div>
     </div>
-    <div class="income-save-row">
-      <button class="btn btn-primary btn-sm" onclick="saveIncomeState(true)">Save income</button>
-      <span class="income-saved-tag" id="income-saved-tag">✓ Saved</span>
+
+    <!-- INVEST TRACKER -->
+    <div class="invest-card">
+      <div class="invest-title">Investing target</div>
+      <div class="invest-count" id="invest-count">🎯 0 hits</div>
+      <div class="invest-amount" id="invest-amount">$0.00</div>
+      <div class="invest-sub" id="invest-sub">of $600 goal</div>
+      <div class="invest-bar-track"><div class="invest-bar-fill" id="invest-bar" style="width:0%"></div></div>
+      <div class="invest-labels"><span>$0</span><span>$600</span></div>
+      <div class="invest-input-row">
+        <input type="number" id="invest-input" placeholder="Add investment amount ($)" min="0" step="0.01" onkeydown="if(event.key==='Enter'){event.preventDefault();addInvestment()}">
+        <button class="btn btn-primary btn-sm" onclick="addInvestment()">Add</button>
+      </div>
     </div>
-    <div class="hint-row">Tip: press Enter in either field to save instantly.</div>
   </div>
 
   <!-- OVERVIEW BREAKDOWN -->
@@ -325,20 +332,6 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       </div>
       <div class="ribbon-track" id="overview-donut-svg"></div>
       <div class="donut-legend" id="overview-donut-legend"></div>
-    </div>
-  </div>
-
-  <!-- INVEST TRACKER -->
-  <div class="invest-card">
-    <div class="invest-title">Investing target</div>
-    <div class="invest-count" id="invest-count">🎯 0 hits</div>
-    <div class="invest-amount" id="invest-amount">$0.00</div>
-    <div class="invest-sub" id="invest-sub">of $600 goal</div>
-    <div class="invest-bar-track"><div class="invest-bar-fill" id="invest-bar" style="width:0%"></div></div>
-    <div class="invest-labels"><span>$0</span><span>$600</span></div>
-    <div class="invest-input-row">
-      <input type="number" id="invest-input" placeholder="Add investment amount ($)" min="0" step="0.01" onkeydown="if(event.key==='Enter'){event.preventDefault();addInvestment()}">
-      <button class="btn btn-primary btn-sm" onclick="addInvestment()">Add</button>
     </div>
   </div>
 
