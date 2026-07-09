@@ -151,6 +151,69 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   nav button{flex-direction:row;gap:6px;padding:14px 20px;font-size:13px}
   main{padding-bottom:0}
 }
+
+/* DESKTOP APP SHELL — keeps things from sprawling edge-to-edge on a laptop */
+@media(min-width:700px){
+  body{background:#000}
+  #app-shell{max-width:840px;margin:0 auto;min-height:100vh;background:var(--bg);box-shadow:0 0 0 1px var(--border),0 40px 100px rgba(0,0,0,.65);position:relative}
+  .modal{max-width:840px;margin:0 auto}
+  .donut-wrap{flex-direction:row;justify-content:center;gap:36px}
+  .donut-svg{width:190px;height:190px}
+  .donut-legend{grid-template-columns:1fr;max-width:260px;align-self:center}
+}
+
+/* ENTER-KEY / SAVE FEEDBACK */
+.save-flash{outline:2px solid var(--green)!important;transition:outline-color .6s ease}
+.field-shake{animation:fieldShake .35s}
+@keyframes fieldShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+.field-error{color:var(--red);font-size:11px;margin-top:5px;display:none}
+.field-error.show{display:block}
+.income-save-row{display:flex;align-items:center;gap:10px;margin-top:2px}
+.income-save-row .btn{width:auto;padding:9px 18px;font-size:13px}
+.income-saved-tag{font-size:11px;color:var(--green);opacity:0;transition:opacity .3s;display:flex;align-items:center;gap:4px}
+.income-saved-tag.show{opacity:1}
+.hint-row{font-size:11px;color:var(--text3);margin:6px 2px 0}
+
+/* ─── FUEL PAGE REDESIGN ───────────────────────────────────────────────── */
+.fuel-hero{position:relative;border-radius:18px;padding:22px 20px;margin:0 16px 16px;overflow:hidden;background:linear-gradient(135deg,#0d2b1c 0%,#0a1f2e 60%,#0d1420 100%);border:1px solid var(--green-border)}
+.fuel-hero::before{content:'';position:absolute;top:-60px;right:-60px;width:200px;height:200px;border-radius:50%;background:radial-gradient(circle,rgba(74,222,128,.25),transparent 70%);pointer-events:none}
+.fuel-hero-top{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--green);text-transform:uppercase;letter-spacing:.08em;font-weight:700;margin-bottom:10px}
+.fuel-live-dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 0 0 rgba(74,222,128,.6);animation:livePulse 2s infinite}
+@keyframes livePulse{0%{box-shadow:0 0 0 0 rgba(74,222,128,.55)}70%{box-shadow:0 0 0 8px rgba(74,222,128,0)}100%{box-shadow:0 0 0 0 rgba(74,222,128,0)}}
+.fuel-hero-name{font-size:19px;font-weight:700;letter-spacing:-.3px}
+.fuel-hero-addr{font-size:12px;color:var(--text2);margin-top:2px}
+.fuel-hero-bottom{display:flex;align-items:flex-end;justify-content:space-between;margin-top:16px;flex-wrap:wrap;gap:10px}
+.fuel-hero-price{font-size:46px;font-weight:800;letter-spacing:-2px;line-height:.9;color:var(--text)}
+.fuel-hero-price sup{font-size:16px;color:var(--text2);font-weight:600;margin-left:3px}
+.fuel-hero-fill{text-align:right;background:rgba(74,222,128,.1);border:1px solid var(--green-border);border-radius:10px;padding:8px 12px}
+.fuel-hero-fill-label{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.06em}
+.fuel-hero-fill-val{font-size:18px;font-weight:700;color:var(--green)}
+
+.fuel-podium{display:flex;align-items:flex-end;gap:8px;margin:0 16px 16px;padding:0 4px}
+.fuel-podium-item{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:12px 12px 8px 8px;padding:10px 8px;text-align:center;position:relative;transition:transform .2s}
+.fuel-podium-item.rank-1{padding-top:16px;border-color:var(--green-border);background:linear-gradient(180deg,var(--green-bg),var(--surface))}
+.fuel-podium-medal{font-size:20px;line-height:1}
+.fuel-podium-price{font-size:20px;font-weight:800;margin:4px 0 1px;letter-spacing:-.5px}
+.fuel-podium-item.rank-1 .fuel-podium-price{font-size:24px;color:var(--green)}
+.fuel-podium-name{font-size:10.5px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fuel-podium-bar{height:4px;border-radius:99px;margin-top:8px;background:var(--surface2)}
+.fuel-podium-bar-fill{height:100%;border-radius:99px}
+
+.fuel-compare{margin:0 16px 16px}
+.fuel-compare-row{display:grid;grid-template-columns:22px 1fr auto;align-items:center;gap:10px;padding:9px 0}
+.fuel-compare-rank{font-size:11px;color:var(--text3);font-weight:700}
+.fuel-compare-mid{min-width:0}
+.fuel-compare-name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fuel-compare-addr{font-size:10.5px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px}
+.fuel-compare-track{height:6px;background:var(--surface2);border-radius:99px;overflow:hidden}
+.fuel-compare-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,#4ade80,#fbbf24)}
+.fuel-compare-price{text-align:right;font-size:15px;font-weight:700;white-space:nowrap}
+.fuel-compare-sub{font-size:10px;color:var(--text3);text-align:right}
+
+.fuel-tip-card{margin:0 16px 12px;border-radius:14px;padding:16px;position:relative;overflow:hidden;background:linear-gradient(135deg,var(--blue-bg),#0a1220);border:1px solid var(--blue-border)}
+.fuel-tip-head{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:#93c5fd;margin-bottom:6px}
+.fuel-tip-body{font-size:12.5px;color:var(--blue);line-height:1.55}
+.fuel-tip-src{font-size:10px;color:var(--text3);margin-top:8px}
 </style>
 </head>
 <body>
@@ -163,12 +226,12 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   <p>Connect your Supabase database to sync across your phone and Mac.</p>
   <div class="setup-field">
     <label>Supabase Project URL</label>
-    <input type="text" id="setup-url" placeholder="https://xxxxxxxxxxxx.supabase.co" autocomplete="off" autocapitalize="off">
+    <input type="text" id="setup-url" placeholder="https://xxxxxxxxxxxx.supabase.co" autocomplete="off" autocapitalize="off" onkeydown="if(event.key==='Enter'){event.preventDefault();setupConnect()}">
     <div class="setup-hint">Project Settings → API → Project URL</div>
   </div>
   <div class="setup-field">
     <label>Supabase Anon Key</label>
-    <input type="text" id="setup-key" placeholder="eyJhbGci..." autocomplete="off" autocapitalize="off">
+    <input type="text" id="setup-key" placeholder="eyJhbGci..." autocomplete="off" autocapitalize="off" onkeydown="if(event.key==='Enter'){event.preventDefault();setupConnect()}">
     <div class="setup-hint">Legacy anon, service_role API keys → anon public</div>
   </div>
   <div id="setup-error"></div>
@@ -176,6 +239,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   <button class="btn btn-primary" style="max-width:400px;width:100%" onclick="setupConnect()">Connect & get started</button>
 </div>
 
+<div id="app-shell">
 <nav style="display:none" id="main-nav">
   <button class="active" onclick="showPage('overview')" id="nav-overview">
     <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Overview
@@ -219,9 +283,14 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   <div class="card">
     <div class="card-title">This week's income</div>
     <div class="input-row">
-      <div class="field" style="flex:2"><label>Amount earned ($)</label><input type="number" id="income-input" placeholder="e.g. 620" min="0" step="1" oninput="handleIncomeInput()"></div>
-      <div class="field" style="flex:1"><label>Fuel (if filling up)</label><input type="number" id="fuel-input" placeholder="$0" min="0" step="0.01" oninput="handleIncomeInput()"></div>
+      <div class="field" style="flex:2"><label>Amount earned ($)</label><input type="number" id="income-input" placeholder="e.g. 620" min="0" step="1" inputmode="decimal" oninput="handleIncomeInput()" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();saveIncomeState(true)}"></div>
+      <div class="field" style="flex:1"><label>Fuel (if filling up)</label><input type="number" id="fuel-input" placeholder="$0" min="0" step="0.01" inputmode="decimal" oninput="handleIncomeInput()" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();saveIncomeState(true)}"></div>
     </div>
+    <div class="income-save-row">
+      <button class="btn btn-primary btn-sm" onclick="saveIncomeState(true)">Save income</button>
+      <span class="income-saved-tag" id="income-saved-tag">✓ Saved</span>
+    </div>
+    <div class="hint-row">Tip: press Enter in either field to save instantly.</div>
   </div>
 
   <!-- OVERVIEW DONUT -->
@@ -247,7 +316,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     <div class="invest-bar-track"><div class="invest-bar-fill" id="invest-bar" style="width:0%"></div></div>
     <div class="invest-labels"><span>$0</span><span>$600</span></div>
     <div class="invest-input-row">
-      <input type="number" id="invest-input" placeholder="Add investment amount ($)" min="0" step="0.01">
+      <input type="number" id="invest-input" placeholder="Add investment amount ($)" min="0" step="0.01" onkeydown="if(event.key==='Enter'){event.preventDefault();addInvestment()}">
       <button class="btn btn-primary btn-sm" onclick="addInvestment()">Add</button>
     </div>
   </div>
@@ -337,20 +406,18 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       Refresh
     </button>
   </div>
-  <div id="fuel-results" class="fuel-section">
+  <div id="fuel-results">
     <div class="empty"><div class="empty-icon">⛽</div>Loading prices…</div>
   </div>
+  <div id="fuel-tip-container"></div>
   <div class="section-label">Enter what you actually paid</div>
   <div class="fuel-manual">
     <p>⛽ Found a better price or went somewhere else? Enter your actual fill cost below — this is what feeds into your budget calc.</p>
     <div class="input-row">
-      <div class="field" style="flex:1"><label>Fuel cost ($)</label><input type="number" id="fuel-manual-input" placeholder="e.g. 85.40" min="0" step="0.01" oninput="syncFuelManual()"></div>
-      <div class="field" style="flex:1"><label>Litres filled</label><input type="number" id="fuel-litres-input" placeholder="e.g. 51" min="0" step="0.1" oninput="calcFuelManual()"></div>
+      <div class="field" style="flex:1"><label>Fuel cost ($)</label><input type="number" id="fuel-manual-input" placeholder="e.g. 85.40" min="0" step="0.01" inputmode="decimal" oninput="syncFuelManual()" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();syncFuelManual()}"></div>
+      <div class="field" style="flex:1"><label>Litres filled</label><input type="number" id="fuel-litres-input" placeholder="e.g. 51" min="0" step="0.1" inputmode="decimal" oninput="calcFuelManual()" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();calcFuelManual()}"></div>
     </div>
     <div style="font-size:12px;color:var(--blue);margin-top:4px" id="fuel-manual-calc"></div>
-  </div>
-  <div style="background:var(--blue-bg);border:1px solid var(--blue-border);border-radius:var(--radius-sm);padding:12px 14px;margin:0 16px 20px">
-    <p style="font-size:12px;color:var(--blue);line-height:1.5">💡 <strong style="color:#93c5fd">Best days to fill up:</strong> Tuesday or Wednesday when Brisbane prices bottom out in the weekly cycle. Your 51L tank at $1.75/L ≈ $89. Use MotorMouth for live servo comparisons.</p>
   </div>
 </div>
 
@@ -367,12 +434,14 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   <div class="modal">
     <div class="modal-handle"></div>
     <div class="modal-title">Log expense</div>
-    <div class="field"><label>What did you spend on?</label><input type="text" id="exp-desc" placeholder="e.g. lunch, petrol, textbook" autocomplete="off"></div>
-    <div class="field"><label>Amount ($)</label><input type="number" id="exp-amount" placeholder="0.00" min="0" step="0.01"></div>
+    <div class="field"><label>What did you spend on?</label><input type="text" id="exp-desc" placeholder="e.g. lunch, petrol, textbook" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('exp-amount').focus()}"></div>
+    <div class="field"><label>Amount ($)</label><input type="number" id="exp-amount" placeholder="0.00" min="0" step="0.01" onkeydown="if(event.key==='Enter'){event.preventDefault();saveExpense()}"></div>
     <div class="field"><label>Category</label><div class="cat-chips" id="cat-chips"></div></div>
+    <div class="field-error" id="exp-error">Add a description and an amount above $0 first.</div>
     <button class="btn btn-primary" onclick="saveExpense()">Save</button>
   </div>
 </div>
+</div><!-- /app-shell -->
 
 <script>
 // ─── CONFIG ──────────────────────────────────────────────────────────────────
@@ -388,6 +457,7 @@ const CATS = [
 
 const BILLS = [
   {id:'old-car',   name:'Old car loan',      amount:150,    day:30,   note:'30th each month',                       freq:'monthly', rachel:false},
+  {id:'new-car',   name:'New car loan',      amount:335.76, day:9,    note:'9th each month',                        freq:'monthly', rachel:false},
   {id:'insurance', name:'Car insurance',     amount:232.05, day:17,   note:'17th each month',                       freq:'monthly', rachel:false},
   {id:'medify',    name:'Medify',            amount:58.89,  day:20,   note:'20th — cancel after September',         freq:'monthly', rachel:false},
   {id:'phone',     name:'Phone (Tangerine)', amount:15.15,  day:19,   note:'19th each month',                       freq:'monthly', rachel:false},
@@ -594,10 +664,24 @@ function drawDonut(svgId,legendId,centerValId,centerLblId,segments,centerLabel){
     requestAnimationFrame(tick);
   }
 
+  function fitLabel(el,text){
+    // Shrink or truncate long segment names so they never spill past the donut hole
+    el.textContent=text;
+    el.style.fontSize='';
+    if(text.length>14){
+      el.style.fontSize='9px';
+      if(text.length>22)el.textContent=text.slice(0,20).trimEnd()+'…';
+    }
+  }
   function setCenter(idx){
     if(!cv||!cl)return;
-    if(idx===-1){cv.textContent=fmt(total);cl.textContent=centerLabel;}
-    else{cv.textContent=fmt(segments[idx].value);cl.textContent=segments[idx].label;}
+    if(idx===-1){cv.style.fontSize='';cv.textContent=fmt(total);fitLabel(cl,centerLabel);}
+    else{
+      const val=fmt(segments[idx].value);
+      cv.style.fontSize=val.length>8?'13px':'';
+      cv.textContent=val;
+      fitLabel(cl,segments[idx].label);
+    }
   }
 
   const circles=[];
@@ -684,17 +768,30 @@ function renderOverview(){
 }
 
 let incomeTimer=null;
-function handleIncomeInput(){updateMetrics();clearTimeout(incomeTimer);incomeTimer=setTimeout(saveIncomeState,1200)}
+function handleIncomeInput(){updateMetrics();clearTimeout(incomeTimer);incomeTimer=setTimeout(()=>saveIncomeState(false),1200)}
 
-async function saveIncomeState(){
-  const income=parseFloat(document.getElementById('income-input').value)||0;
-  const fuel=parseFloat(document.getElementById('fuel-input').value)||0;
+async function saveIncomeState(manual){
+  const incomeEl=document.getElementById('income-input');
+  const fuelEl=document.getElementById('fuel-input');
+  const income=parseFloat(incomeEl.value)||0;
+  const fuel=parseFloat(fuelEl.value)||0;
   state.income=income;state.fuel=fuel;
   setSyncStatus('syncing','Saving…');
+  const tag=document.getElementById('income-saved-tag');
   try{
     await dbUpsert('budget_state',{id:'main',income,fuel,invest_total:state.invest_total,invest_hits:state.invest_hits,updated_at:new Date().toISOString()});
     setSyncStatus('synced','Saved');
-  }catch(e){setSyncStatus('error','Save failed')}
+    if(manual&&tag){
+      tag.textContent='✓ Saved';tag.style.color='var(--green)';
+      [incomeEl,fuelEl].forEach(el=>{el.classList.add('save-flash');setTimeout(()=>el.classList.remove('save-flash'),700)});
+      tag.classList.add('show');
+      clearTimeout(tag._t);tag._t=setTimeout(()=>tag.classList.remove('show'),2200);
+    }
+    updateMetrics();
+  }catch(e){
+    setSyncStatus('error','Save failed');
+    if(manual&&tag){tag.textContent='✗ Save failed — check connection';tag.style.color='var(--red)';tag.classList.add('show');clearTimeout(tag._t);tag._t=setTimeout(()=>tag.classList.remove('show'),3500)}
+  }
 }
 
 function updateMetrics(){
@@ -842,7 +939,7 @@ function renderBills(){
   document.getElementById('bills-weekly-share').textContent=fmt(total/4);
 
   // Bills donut
-  const billColors=['#f87171','#fb923c','#fbbf24','#60a5fa','#a78bfa','#f472b6'];
+  const billColors=['#f87171','#fb7185','#fb923c','#fbbf24','#60a5fa','#a78bfa','#f472b6'];
   drawDonut('bills-donut-svg','bills-donut-legend','bills-donut-center-val','bills-donut-center-lbl',
     BILLS.map((b,i)=>({label:b.name,value:b.amount,color:billColors[i%billColors.length]})),'total');
 
@@ -888,6 +985,7 @@ function openAddExpense(){
   selectedCat='food';
   document.getElementById('exp-desc').value='';
   document.getElementById('exp-amount').value='';
+  document.getElementById('exp-error').classList.remove('show');
   document.getElementById('cat-chips').innerHTML=CATS.map(c=>`<div class="cat-chip${c.id===selectedCat?' selected':''}" onclick="selectCat('${c.id}')" id="chip-${c.id}">${c.icon} ${c.label}</div>`).join('');
   document.getElementById('expense-modal').classList.add('open');
   setTimeout(()=>document.getElementById('exp-desc').focus(),300);
@@ -897,9 +995,20 @@ function handleModalClick(e){if(e.target.id==='expense-modal')closeModal()}
 function closeModal(){document.getElementById('expense-modal').classList.remove('open')}
 
 async function saveExpense(){
-  const desc=document.getElementById('exp-desc').value.trim();
-  const amount=parseFloat(document.getElementById('exp-amount').value);
-  if(!desc||isNaN(amount)||amount<=0){document.getElementById('exp-desc').focus();return}
+  const descEl=document.getElementById('exp-desc');
+  const amountEl=document.getElementById('exp-amount');
+  const errEl=document.getElementById('exp-error');
+  const desc=descEl.value.trim();
+  const amount=parseFloat(amountEl.value);
+  if(!desc||isNaN(amount)||amount<=0){
+    errEl.classList.add('show');
+    const badEl=!desc?descEl:amountEl;
+    badEl.classList.add('field-shake');
+    setTimeout(()=>badEl.classList.remove('field-shake'),350);
+    badEl.focus();
+    return;
+  }
+  errEl.classList.remove('show');
   const exp={description:desc,amount,cat:selectedCat,date:todayStr(),created_at:new Date().toISOString()};
   closeModal();setSyncStatus('syncing','Saving…');
   try{
@@ -942,10 +1051,38 @@ function renderLog(){
 }
 
 // ─── FUEL PRICES ─────────────────────────────────────────────────────────────
+// Dynamic, timely "when to fill up" tip. Grounded in ACCC's petrol price cycle
+// guidance rather than a fixed hardcoded day — Brisbane's cycle drifts, so this
+// gives a directional steer for *today* and always defers to the live board above.
+function renderFuelTip(cheapestCents){
+  const now=new Date();
+  const day=now.getDay(); // 0 Sun..6 Sat
+  const hour=now.getHours();
+  let headline, body;
+  if(day>=1&&day<=3){ // Mon-Wed
+    headline='Good window today';
+    body="Brisbane's price cycle has historically tended to run lowest early in the week, so today is often a reasonable time to fill up. That said, the cycle drifts — check the board above rather than assuming.";
+  }else if(day===4||day===5){ // Thu-Fri
+    headline='Prices may be climbing';
+    body="Brisbane servos have historically been more likely to hike prices from Thursday into the weekend. If your tank can hold out until Monday you may catch a lower price — but if you're low now, don't stress, just grab the cheapest option above.";
+  }else{ // weekend
+    headline='Weekend — mixed bag';
+    body="Weekend prices sit wherever the current cycle happens to be. If you can wait, Monday–Wednesday has historically been the stronger bet in Brisbane. If you need fuel today, the board above is your best guide.";
+  }
+  const fillLine=cheapestCents?`At today's cheapest live price (${(cheapestCents/10).toFixed(1)}c/L), a 51L tank runs about $${((cheapestCents/1000)*51).toFixed(2)}.`:'';
+  document.getElementById('fuel-tip-container').innerHTML=`
+    <div class="fuel-tip-card">
+      <div class="fuel-tip-head">💡 ${headline}</div>
+      <div class="fuel-tip-body">${body} ${fillLine}</div>
+      <div class="fuel-tip-src">Based on ACCC petrol price cycle guidance for Brisbane — cycles vary in length and this is a guide only, not a guarantee. accc.gov.au</div>
+    </div>`;
+}
+
 async function loadFuelPrices(){
   const el=document.getElementById('fuel-results');
   const updEl=document.getElementById('fuel-last-updated');
   el.innerHTML='<div class="empty"><div class="empty-icon">⛽</div>Loading live prices…</div>';
+  renderFuelTip(null);
   try{
     const FUEL_TOKEN='2fe40e8f-bac1-4f29-91a2-41cf363335c2';
     const BASE='https://fppdirectapi-prod.fuelpricesqld.com.au';
@@ -973,24 +1110,65 @@ async function loadFuelPrices(){
         return{name:s.N||'Unknown',address:s.A||'',priceCents:Number(p.Price),priceDisplay:ppl.toFixed(1),fill51L:((ppl/100)*51).toFixed(2),updated:p.TransactionDateUtc,isHighlighted:isH};
       })
       .sort((a,b)=>a.priceCents-b.priceCents).slice(0,5);
-    if(!results.length){el.innerHTML='<div class="empty"><div class="empty-icon">⛽</div>No prices found</div>';return}
+    if(!results.length){el.innerHTML='<div class="empty"><div class="empty-icon">⛽</div>No prices found</div>';renderFuelTip(null);return}
     updEl.textContent='Updated '+new Date().toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'});
-    const medals=['🥇','🥈','🥉','4️⃣','5️⃣'];
-    el.innerHTML=results.map((s,i)=>`<div class="fuel-card${s.isHighlighted?' highlighted':''}">
-      <div class="fuel-rank">${medals[i]} #${i+1} cheapest</div>
-      <div class="fuel-name">${s.name}</div>
-      <div class="fuel-addr">${s.address}</div>
-      <div class="fuel-price-row">
-        <div class="fuel-price">${s.priceDisplay}</div>
-        <div class="fuel-price-unit">c/L</div>
-        <div class="fuel-fill">51L ≈ $${s.fill51L}</div>
+    renderFuelTip(results[0].priceCents);
+
+    const cheapest=results[0];
+    const maxPrice=Math.max(...results.map(r=>r.priceCents));
+    const minPrice=Math.min(...results.map(r=>r.priceCents));
+    const range=Math.max(1,maxPrice-minPrice);
+
+    // Hero card — the single cheapest station right now
+    const heroHTML=`<div class="fuel-hero">
+      <div class="fuel-hero-top"><span class="fuel-live-dot"></span>Cheapest right now${cheapest.isHighlighted?' · 📍 near you':''}</div>
+      <div class="fuel-hero-name">${cheapest.name}</div>
+      <div class="fuel-hero-addr">${cheapest.address}</div>
+      <div class="fuel-hero-bottom">
+        <div class="fuel-hero-price">${cheapest.priceDisplay}<sup>c/L</sup></div>
+        <div class="fuel-hero-fill"><div class="fuel-hero-fill-label">51L fill</div><div class="fuel-hero-fill-val">$${cheapest.fill51L}</div></div>
       </div>
-      ${s.isHighlighted?'<div class="fuel-highlight-badge">📍 Near you</div>':''}
-      <div class="fuel-updated">Last reported: ${new Date(s.updated).toLocaleString('en-AU',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</div>
-    </div>`).join('');
+    </div>`;
+
+    // Podium — top 3, arranged 2nd / 1st / 3rd like a dais
+    const medals=['🥇','🥈','🥉'];
+    const podiumColors=['#4ade80','#a1a1aa','#d97706'];
+    const top3=results.slice(0,3);
+    const order=top3.length===3?[1,0,2]:top3.map((_,i)=>i);
+    const podiumHTML=top3.length?`<div class="fuel-podium">${order.filter(i=>top3[i]).map(i=>{
+      const s=top3[i];
+      const barPct=20+((maxPrice-s.priceCents)/range)*80;
+      return `<div class="fuel-podium-item${i===0?' rank-1':''}">
+        <div class="fuel-podium-medal">${medals[i]}</div>
+        <div class="fuel-podium-price">${s.priceDisplay}</div>
+        <div class="fuel-podium-name" title="${s.name}">${s.name}</div>
+        <div class="fuel-podium-bar"><div class="fuel-podium-bar-fill" style="width:${barPct}%;background:${podiumColors[i]}"></div></div>
+      </div>`;
+    }).join('')}</div>`:'';
+
+    // Comparison bars — every station on one relative scale, cheap = green, pricier = amber
+    const compareHTML=`<div class="fuel-compare">${results.map((s,i)=>{
+      const pct=5+((s.priceCents-minPrice)/range)*95;
+      return `<div class="fuel-compare-row">
+        <div class="fuel-compare-rank">#${i+1}</div>
+        <div class="fuel-compare-mid">
+          <div class="fuel-compare-name">${s.name}${s.isHighlighted?' 📍':''}</div>
+          <div class="fuel-compare-addr">${s.address}</div>
+          <div class="fuel-compare-track"><div class="fuel-compare-fill" style="width:${pct}%"></div></div>
+        </div>
+        <div>
+          <div class="fuel-compare-price">${s.priceDisplay}c</div>
+          <div class="fuel-compare-sub">$${s.fill51L} / 51L</div>
+        </div>
+      </div>`;
+    }).join('')}</div>
+    <div style="font-size:10px;color:var(--text3);margin:0 16px 4px">Last reported: ${new Date(cheapest.updated).toLocaleString('en-AU',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</div>`;
+
+    el.innerHTML=heroHTML+podiumHTML+compareHTML;
   }catch(e){
     el.innerHTML='<div class="empty"><div class="empty-icon">⚠️</div>Could not load prices — check your connection</div>';
     updEl.textContent='Failed to load';console.error(e);
+    renderFuelTip(null);
   }
 }
 
