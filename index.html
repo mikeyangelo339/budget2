@@ -13,6 +13,14 @@ nav{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:
 nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 0 8px;background:none;border:none;color:var(--text3);font-size:10px;font-family:inherit;cursor:pointer;transition:color .15s}
 nav button.active{color:var(--green)}
 nav button svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+
+/* A bit of breathing room around the bottom tab bar so buttons are easier to hit
+   accurately — phone only. Scoped to max-width so it can never touch the desktop
+   top nav (which lives in the separate min-width:480px block below). */
+@media(max-width:479px){
+  nav{padding:6px 6px calc(6px + env(safe-area-inset-bottom));gap:3px}
+  nav button{padding:12px 0 9px}
+}
 main{padding:0 0 80px}
 .page{display:none}.page.active{display:block}
 .page-header{padding:56px 20px 16px}
